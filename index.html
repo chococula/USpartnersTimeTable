@@ -6,11 +6,12 @@
 <title>Week of Nov 30 Availability</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a booking ledger. Days run across as columns, hours run down; one slot = one cell. Phone stacks days. */
+/* Layout: a booking ledger. Each day is split into two track columns (SW QA | App Dev); hours run down. Phone stacks days. */
 :root{
   color-scheme:light;
-  --ink:#16202e; --muted:#5d6878; --ground:#f3f5f8; --sheet:#ffffff; --rule:#dce1e8;
+  --ink:#16202e; --muted:#5d6878; --ground:#f3f5f8; --sheet:#ffffff; --rule:#dce1e8; --rule-strong:#b9c2cf;
   --accent:#2b5fd9;
+  --qa:#3b4fa8; --dev:#7a3fa0;
   --open:#1f8a5b; --open-bg:#e5f4ec;
   --hold:#a96a00; --hold-bg:#fbf0d9;
   --busy:#8a94a3; --busy-bg:#eceff3;
@@ -20,8 +21,9 @@
 @media (prefers-color-scheme: dark){
   :root{
     color-scheme:dark;
-    --ink:#e7ebf1; --muted:#9aa5b5; --ground:#10151d; --sheet:#171e28; --rule:#2a3442;
+    --ink:#e7ebf1; --muted:#9aa5b5; --ground:#10151d; --sheet:#171e28; --rule:#2a3442; --rule-strong:#475366;
     --accent:#7aa2ff;
+    --qa:#9aabff; --dev:#d29cf2;
     --open:#5fd39b; --open-bg:#173527;
     --hold:#f0b54a; --hold-bg:#3a2c10;
     --busy:#6f7a8a; --busy-bg:#1f2732;
@@ -30,32 +32,41 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-display);font-size:15px;line-height:1.5;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));}
-.wrap{max-width:1040px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:28px}
+.wrap{max-width:1280px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:28px}
 header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px}
 .eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
 h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance}
-.sub{color:var(--muted);margin:10px 0 0;max-width:60ch}
-.summary{display:flex;align-items:baseline;gap:10px;font-variant-numeric:tabular-nums}
-.summary b{font-size:40px;font-weight:700;line-height:1;color:var(--open)}
-.summary span{color:var(--muted);font-size:14px}
+.sub{color:var(--muted);margin:10px 0 0;max-width:62ch}
+.totals{display:flex;gap:28px;font-variant-numeric:tabular-nums}
+.total{display:flex;flex-direction:column;gap:2px}
+.total b{font-size:34px;font-weight:700;line-height:1;color:var(--open)}
+.total span{color:var(--muted);font-size:13px}
+.tk{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.total .tk.qa,.trackhead .tk.qa{color:var(--qa)}
+.total .tk.dev,.trackhead .tk.dev{color:var(--dev)}
 .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .lg-open{background:var(--open-bg);box-shadow:inset 0 0 0 1.5px var(--open)}
 .lg-hold{background:var(--hold-bg);box-shadow:inset 0 0 0 1.5px var(--hold)}
 .lg-busy{background:var(--busy-bg);box-shadow:inset 0 0 0 1.5px var(--busy)}
-.board-scroll{overflow-x:auto}
-.board{display:grid;grid-template-columns:72px repeat(5,minmax(140px,1fr));background:var(--sheet);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
-.board > div{border-top:1px solid var(--rule);border-left:1px solid var(--rule)}
-.board > .head{border-top:0}
-.board > .tcol{border-left:0}
-.head{padding:14px 12px 12px;display:flex;flex-direction:column;gap:2px}
-.head .dow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.head .date{font-size:18px;font-weight:600}
-.head .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.tcol{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding:10px 10px 0 12px;font-variant-numeric:tabular-nums}
-.cell{padding:6px}
-.slot{all:unset;box-sizing:border-box;width:100%;min-height:48px;border-radius:6px;padding:7px 10px;display:flex;flex-direction:column;justify-content:center;gap:1px;cursor:pointer;font-family:var(--f-display);transition:box-shadow .12s ease}
-.slot .t{font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+
+.board-scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--sheet)}
+.board{display:grid;grid-template-columns:64px repeat(10,minmax(100px,1fr));min-width:1080px}
+.board > div{border-top:1px solid var(--rule)}
+.board > .first{border-left:2px solid var(--rule-strong)}
+.board > .second{border-left:1px dashed var(--rule)}
+.board > .r1{border-top:0}
+.corner{grid-row:span 2}
+.dayhead{grid-column:span 2;padding:14px 12px 10px;display:flex;align-items:baseline;gap:8px}
+.dow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.date{font-size:18px;font-weight:600}
+.trackhead{padding:8px 10px;display:flex;flex-direction:column}
+.trackhead .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tcol{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding:12px 8px 0 12px;font-variant-numeric:tabular-nums}
+.cell{padding:5px}
+
+.slot{all:unset;box-sizing:border-box;width:100%;min-height:44px;border-radius:6px;padding:6px 9px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-family:var(--f-display);transition:box-shadow .12s ease}
+.slot .t{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
 .slot .s{font-size:12px;font-weight:600;letter-spacing:.02em}
 .slot.open{background:var(--open-bg);color:var(--open);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--open) 45%,transparent)}
 .slot.hold{background:var(--hold-bg);color:var(--hold);cursor:default;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--hold) 45%,transparent)}
@@ -64,19 +75,22 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
 .slot.open:hover{box-shadow:inset 0 0 0 2px var(--open)}
 .slot.picked{box-shadow:inset 0 0 0 2.5px var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--sheet));color:var(--accent)}
 .slot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
 .panel{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:18px 20px}
-.panel p{margin:0;max-width:68ch}
+.panel p{margin:0;max-width:72ch}
 .panel .pick{font-family:var(--f-mono);font-size:14px;color:var(--accent);font-weight:500}
 .foot{font-size:13px;color:var(--muted);margin:0}
-.daycard{display:none;background:var(--sheet);border:1px solid var(--rule)!important;border-radius:10px;overflow:hidden}
-.daycard .head{border-bottom:1px solid var(--rule)}
-.daycard .list{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px}
+
+.cards{display:none;flex-direction:column;gap:14px}
+.daycard{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.daycard .dayhead{border-bottom:1px solid var(--rule)}
+.daycard .cols{display:grid;grid-template-columns:1fr 1fr}
+.daycard .col{display:flex;flex-direction:column;gap:6px;padding:8px}
+.daycard .col + .col{border-left:1px dashed var(--rule)}
+.daycard .trackhead{padding:2px 2px 4px}
 @media (max-width:640px){
-  .board-scroll{overflow:visible}
-  .board{display:flex;flex-direction:column;border:0;background:none;gap:14px;overflow:visible}
-  .board > div{border:0}
-  .board > .tcol,.board > .cell,.board > .head{display:none}
-  .board > .daycard{display:block}
+  .board-scroll{display:none}
+  .cards{display:flex}
 }
 @media (prefers-reduced-motion: reduce){.slot{transition:none}}
 </style>
@@ -87,9 +101,9 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
     <div>
       <p class="eyebrow">Meeting availability · <span id="tz">PST (UTC−8)</span></p>
       <h1>Open slots, Mon Nov 30 to Fri Dec 4</h1>
-      <p class="sub">Each block is one hour between 9:00 and 17:00. Pick an open slot to see it written out, then send that line back in your reply so we can confirm it.</p>
+      <p class="sub">Two tracks run in parallel each day: SW QA and App Dev. Each block is one hour between 9:00 and 17:00. Pick an open slot in your track, then send that line back in your reply so we can confirm it.</p>
     </div>
-    <div class="summary"><b id="openCount">40</b><span>of <span id="totalCount">40</span> slots open</span></div>
+    <div class="totals" id="totals"></div>
   </header>
   <div class="legend">
     <span><i class="lg-open"></i>Open</span>
@@ -97,19 +111,25 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
     <span><i class="lg-busy"></i>Unavailable</span>
   </div>
   <div class="board-scroll"><div class="board" id="board"></div></div>
+  <div class="cards" id="cards"></div>
   <div class="panel"><p id="pickText">No slot selected yet. Pick an open block above.</p></div>
   <p class="foot" id="updated"></p>
 </div>
 
 <!--
   EDIT AVAILABILITY HERE.
-  "slots" lists only the slots that are NOT open. Key = "YYYY-MM-DDTHH" (start hour, 24h).
+  "slots" lists only the slots that are NOT open.
+  Key = "<track>|YYYY-MM-DDTHH" (track id "qa" or "dev", start hour in 24h).
   Value = "hold" (tentatively held) or "busy" (unavailable).
-  Example: "slots": {"2026-12-01T10": "busy", "2026-12-02T14": "hold"}
+  Example: "slots": {"qa|2026-12-01T10": "busy", "dev|2026-12-02T14": "hold"}
 -->
 <script id="state" type="application/json">
 {
   "tz": "PST (UTC−8)",
+  "tracks": [
+    {"id": "qa", "name": "SW QA"},
+    {"id": "dev", "name": "App Dev"}
+  ],
   "days": ["2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"],
   "startHour": 9,
   "endHour": 17,
@@ -124,21 +144,22 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
   var DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var LABEL = {open:'Open', hold:'Held', busy:'Unavailable'};
+  var TRACK = {}; S.tracks.forEach(function(t){TRACK[t.id]=t.name});
   function pad(n){return (n<10?'0':'')+n}
   function parts(iso){var p=iso.split('-').map(Number);var d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return {dow:DOW[d.getUTCDay()],mon:MON[p[1]-1],day:p[2]}}
-  function key(d,h){return d+'T'+pad(h)}
+  function key(t,d,h){return t+'|'+d+'T'+pad(h)}
   function state(k){return S.slots[k]||'open'}
   var hours=[];for(var h=S.startHour;h<S.endHour;h++)hours.push(h);
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+  function openCount(t,d){return hours.filter(function(h){return state(key(t,d,h))==='open'}).length}
 
-  function slotBtn(d,h,suffix){
-    var k=key(d,h), st=state(k), b=document.createElement('button');
-    b.type='button'; b.className='slot '+st+(picked===k?' picked':'');
-    b.id='slot-'+k+suffix;
-    var t=document.createElement('span');t.className='t';t.textContent=pad(h)+':00 – '+pad(h+1)+':00';
-    var s=document.createElement('span');s.className='s';s.textContent=picked===k?'Selected':LABEL[st];
-    b.appendChild(t);b.appendChild(s);
+  function slotBtn(t,d,h,suffix){
+    var k=key(t,d,h), st=state(k), b=el('button','slot '+st+(picked===k?' picked':''));
+    b.type='button'; b.id='slot-'+k.replace('|','-')+suffix;
+    b.appendChild(el('span','t',pad(h)+':00 – '+pad(h+1)+':00'));
+    b.appendChild(el('span','s',picked===k?'Selected':LABEL[st]));
     var p=parts(d);
-    b.setAttribute('aria-label',p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00 to '+pad(h+1)+':00, '+LABEL[st]);
+    b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00 to '+pad(h+1)+':00, '+LABEL[st]);
     if(st!=='open'){b.disabled=true;return b;}
     b.addEventListener('click',function(){
       picked=(picked===k?null:k); render();
@@ -146,39 +167,59 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
     });
     return b;
   }
-  function head(d){
-    var p=parts(d), el=document.createElement('div'); el.className='head';
-    var open=hours.filter(function(h){return state(key(d,h))==='open'}).length;
-    ['dow','date','cnt'].forEach(function(c){var s=document.createElement('span');s.className=c;el.appendChild(s)});
-    el.children[0].textContent=p.dow; el.children[1].textContent=p.mon+' '+p.day; el.children[2].textContent=open+' of '+hours.length+' open';
-    return el;
+  function dayHead(d,extra){
+    var p=parts(d), e=el('div','dayhead'+(extra||''));
+    e.appendChild(el('span','dow',p.dow)); e.appendChild(el('span','date',p.mon+' '+p.day));
+    return e;
   }
+  function trackHead(t,d,extra){
+    var e=el('div','trackhead'+(extra||''));
+    e.appendChild(el('span','tk '+t,TRACK[t]));
+    e.appendChild(el('span','cnt',openCount(t,d)+' of '+hours.length+' open'));
+    return e;
+  }
+
   function render(){
     var board=document.getElementById('board'); board.textContent='';
-    var corner=document.createElement('div');corner.className='head tcol';board.appendChild(corner);
-    S.days.forEach(function(d){board.appendChild(head(d))});
-    hours.forEach(function(h){
-      var tc=document.createElement('div');tc.className='tcol';tc.textContent=pad(h)+':00';board.appendChild(tc);
-      S.days.forEach(function(d){var c=document.createElement('div');c.className='cell';c.appendChild(slotBtn(d,h,''));board.appendChild(c)});
-    });
+    board.appendChild(el('div','corner r1'));
+    S.days.forEach(function(d){board.appendChild(dayHead(d,' r1 first'))});
     S.days.forEach(function(d){
-      var card=document.createElement('div');card.className='daycard';card.appendChild(head(d));
-      var list=document.createElement('div');list.className='list';
-      hours.forEach(function(h){list.appendChild(slotBtn(d,h,'-m'))});
-      card.appendChild(list);board.appendChild(card);
+      S.tracks.forEach(function(t,i){board.appendChild(trackHead(t.id,d,i===0?' first':' second'))});
     });
-    var total=S.days.length*hours.length, open=0;
-    S.days.forEach(function(d){hours.forEach(function(h){if(state(key(d,h))==='open')open++})});
-    document.getElementById('openCount').textContent=open;
-    document.getElementById('totalCount').textContent=total;
+    hours.forEach(function(h){
+      board.appendChild(el('div','tcol',pad(h)+':00'));
+      S.days.forEach(function(d){
+        S.tracks.forEach(function(t,i){
+          var c=el('div','cell'+(i===0?' first':' second'));c.appendChild(slotBtn(t.id,d,h,''));board.appendChild(c);
+        });
+      });
+    });
+    var cards=document.getElementById('cards'); cards.textContent='';
+    S.days.forEach(function(d){
+      var card=el('div','daycard'); card.appendChild(dayHead(d));
+      var cols=el('div','cols');
+      S.tracks.forEach(function(t){
+        var col=el('div','col'); col.appendChild(trackHead(t.id,d));
+        hours.forEach(function(h){col.appendChild(slotBtn(t.id,d,h,'-m'))});
+        cols.appendChild(col);
+      });
+      card.appendChild(cols); cards.appendChild(card);
+    });
+    var totals=document.getElementById('totals'); totals.textContent='';
+    S.tracks.forEach(function(t){
+      var n=0; S.days.forEach(function(d){n+=openCount(t.id,d)});
+      var box=el('div','total');
+      box.appendChild(el('span','tk '+t.id,t.name));
+      box.appendChild(el('b',null,String(n)));
+      box.appendChild(el('span',null,'of '+(S.days.length*hours.length)+' open'));
+      totals.appendChild(box);
+    });
     document.getElementById('tz').textContent=S.tz;
     var pt=document.getElementById('pickText');
     if(picked){
-      var d=picked.slice(0,10),h=Number(picked.slice(11)),p=parts(d);
+      var t=picked.split('|')[0], rest=picked.split('|')[1], d=rest.slice(0,10), h=Number(rest.slice(11)), p=parts(d);
       pt.textContent='Your pick: ';
-      var sp=document.createElement('span');sp.className='pick';
-      sp.textContent=p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00–'+pad(h+1)+':00 '+S.tz;
-      pt.appendChild(sp);
+      pt.appendChild(el('span','pick',TRACK[t]+' · '+p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00–'+pad(h+1)+':00 '+S.tz));
     } else pt.textContent='No slot selected yet. Pick an open block above.';
     var u=parts(S.updated);
     document.getElementById('updated').textContent='Last updated '+u.mon+' '+u.day+'. Times shown in '+S.tz+'.';
