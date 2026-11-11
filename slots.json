@@ -1,7 +1,16 @@
 {
   "slots": {
+    "dev|2026-12-02T13": "booked",
+    "dev|2026-12-02T14": "booked",
+    "dev|2026-12-02T15": "booked",
     "qa|2026-12-01T11": "booked",
     "qa|2026-12-01T12": "booked"
   },
-  "updated": "2026-11-11T23:10:11.296Z"
+  "details": {
+    "v": 1,
+    "salt": "GKSM/IO7OrUwkwyvAlmDhg==",
+    "iv": "/osnGHpvcIH+4e6b",
+    "ct": "5QHgMAT6Uhnb6PdAGHkBOkF+LaUOuBp7ox3IzPM9zQYnbQBmiNXcBIvoCpud3Ef2NpZcRrZKNqAHZSuHf5Z+QmbpnvoB3ij6bwzc2257LDgNRkU4IvZfhiiYmyMmIjgxUW7DsUJb8RQ3Si9pkjkN3/eJ+OFivRFNVY+ZKk8jW9PftWJJFoSimIJxlSzc7cj4WwDLnvQ1auyh1n+TRSfyQjLcqDyH3C69OI3Pt3ul5gMgI7UObJPQFCfIfj0lqRtkmFA8YTAj7tOn+yLalphT4HaWHpCWULAr6t1wA5sIsMfxPfq+10ys64WBb3gL9oZx56IpbEO+x1bvst4O6rkyv+g6/3vgn4OAeive7WdyYLmObikfLaquBnU="
+  },
+  "updated": "2026-11-11T23:55:14.527Z"
 }
