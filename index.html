@@ -187,7 +187,7 @@ textarea{resize:vertical;min-height:60px}
         <option value="busy">Unavailable</option>
       </select>
     </div>
-    <div class="field"><label for="fCo">Company</label><input id="fCo" type="text" autocomplete="off"></div>
+    <div class="field"><label for="fCo">Company</label><input id="fCo" type="text" autocomplete="off" list="coList" placeholder="Type or pick a saved partner"><datalist id="coList"></datalist></div>
     <div class="field"><label for="fName">Contact person</label><input id="fName" type="text" autocomplete="off"></div>
     <div class="grid2">
       <div class="field"><label for="fEmail">Email</label><input id="fEmail" type="email" autocomplete="off"></div>
@@ -423,8 +423,21 @@ textarea{resize:vertical;min-height:60px}
     $('fStatus').value=state(k)==='open'?'booked':state(k);
     $('fCo').value=info.company||''; $('fName').value=info.name||'';
     $('fEmail').value=info.email||''; $('fPhone').value=info.phone||''; $('fNote').value=info.note||'';
+    var list=$('coList'); list.textContent='';
+    Object.keys(partners()).sort(function(a,b){return a.localeCompare(b)}).forEach(function(c){ var o=document.createElement('option'); o.value=c; list.appendChild(o); });
     $('dlg').showModal(); $('fCo').focus();
   }
+  // Known partners, built from every saved slot's details (last entry per company wins).
+  function partners(){
+    var m={};
+    Object.keys(details).sort().forEach(function(k){ var d=details[k]; if(d&&d.company) m[d.company]=d; });
+    return m;
+  }
+  $('fCo').addEventListener('input',function(){
+    var p=partners()[$('fCo').value.trim()];
+    if(!p) return;
+    $('fName').value=p.name||''; $('fEmail').value=p.email||''; $('fPhone').value=p.phone||'';
+  });
   $('dlgCancel').addEventListener('click',function(){ $('dlg').close(); });
   $('dlgForm').addEventListener('submit',function(e){
     e.preventDefault();
