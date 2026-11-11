@@ -1,4 +1,7 @@
 {
-  "slots": {},
-  "updated": null
+  "slots": {
+    "qa|2026-12-01T11": "booked",
+    "qa|2026-12-01T12": "booked"
+  },
+  "updated": "2026-11-11T23:10:11.296Z"
 }
