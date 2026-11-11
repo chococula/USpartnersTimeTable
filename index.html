@@ -193,6 +193,7 @@ textarea{resize:vertical;min-height:60px}
       <div class="field"><label for="fEmail">Email</label><input id="fEmail" type="email" autocomplete="off"></div>
       <div class="field"><label for="fPhone">Phone</label><input id="fPhone" type="tel" autocomplete="off"></div>
     </div>
+    <div class="field"><label for="fAddr">Location / address</label><input id="fAddr" type="text" autocomplete="off" placeholder="Street, city, or meeting room / video link"></div>
     <div class="field"><label for="fNote">Note</label><textarea id="fNote"></textarea></div>
     <div class="dlg-btns">
       <button class="btn ghost" type="button" id="dlgCancel">Cancel</button>
@@ -277,7 +278,7 @@ textarea{resize:vertical;min-height:60px}
     b.appendChild(el('span','s',picked===k?'Selected':LABEL[st]));
     if(info){
       if(info.company) b.appendChild(el('span','co',info.company));
-      var who=[info.name,info.email,info.phone].filter(Boolean);
+      var who=[info.name,info.email,info.phone,info.address?'📍 '+info.address:''].filter(Boolean);
       who.forEach(function(x){b.appendChild(el('span','pp',x))});
       if(info.note) b.appendChild(el('span','pp',info.note));
     }
@@ -422,7 +423,7 @@ textarea{resize:vertical;min-height:60px}
     $('dlgTitle').textContent=w.track; $('dlgWhen').textContent=w.text;
     $('fStatus').value=state(k)==='open'?'booked':state(k);
     $('fCo').value=info.company||''; $('fName').value=info.name||'';
-    $('fEmail').value=info.email||''; $('fPhone').value=info.phone||''; $('fNote').value=info.note||'';
+    $('fEmail').value=info.email||''; $('fPhone').value=info.phone||''; $('fAddr').value=info.address||''; $('fNote').value=info.note||'';
     var list=$('coList'); list.textContent='';
     Object.keys(partners()).sort(function(a,b){return a.localeCompare(b)}).forEach(function(c){ var o=document.createElement('option'); o.value=c; list.appendChild(o); });
     $('dlg').showModal(); $('fCo').focus();
@@ -436,13 +437,13 @@ textarea{resize:vertical;min-height:60px}
   $('fCo').addEventListener('input',function(){
     var p=partners()[$('fCo').value.trim()];
     if(!p) return;
-    $('fName').value=p.name||''; $('fEmail').value=p.email||''; $('fPhone').value=p.phone||'';
+    $('fName').value=p.name||''; $('fEmail').value=p.email||''; $('fPhone').value=p.phone||''; $('fAddr').value=p.address||'';
   });
   $('dlgCancel').addEventListener('click',function(){ $('dlg').close(); });
   $('dlgForm').addEventListener('submit',function(e){
     e.preventDefault();
     var k=editing, st=$('fStatus').value;
-    var info={company:$('fCo').value.trim(),name:$('fName').value.trim(),email:$('fEmail').value.trim(),phone:$('fPhone').value.trim(),note:$('fNote').value.trim()};
+    var info={company:$('fCo').value.trim(),name:$('fName').value.trim(),email:$('fEmail').value.trim(),phone:$('fPhone').value.trim(),address:$('fAddr').value.trim(),note:$('fNote').value.trim()};
     Object.keys(info).forEach(function(x){ if(!info[x]) delete info[x]; });
     if(st==='open'){ delete slots[k]; delete details[k]; }
     else { slots[k]=st; if(Object.keys(info).length) details[k]=info; else delete details[k]; }
