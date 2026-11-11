@@ -125,6 +125,11 @@ dialog h3{margin:0;font-size:17px}
 dialog .when{font-family:var(--f-mono);font-size:13px;color:var(--muted);margin:-8px 0 0}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
+.field.missing label{color:var(--danger)}
+.field.missing input{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--ground))}
+.dlg-msg{margin:0;font-size:13px;color:var(--danger)}
+.admin .slot.incomplete{box-shadow:inset 0 0 0 2px var(--danger)}
+.slot .miss{font-size:11px;font-weight:600;color:var(--danger);margin-top:2px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 textarea{resize:vertical;min-height:60px}
 .dlg-btns{display:flex;justify-content:flex-end;gap:8px}
@@ -210,6 +215,7 @@ textarea{resize:vertical;min-height:60px}
     </div>
     <div class="field"><label for="fAddr">Location / address</label><input id="fAddr" type="text" autocomplete="off" placeholder="Street, city, or meeting room / video link"></div>
     <div class="field"><label for="fNote">Note</label><textarea id="fNote"></textarea></div>
+    <p class="dlg-msg" id="dlgMsg" hidden></p>
     <div class="dlg-btns">
       <button class="btn ghost" type="button" id="dlgCancel">Cancel</button>
       <button class="btn" type="submit" id="dlgApply">Apply</button>
@@ -255,6 +261,11 @@ textarea{resize:vertical;min-height:60px}
   var hours=[];for(var h=C.startHour;h<C.endHour;h++)hours.push(h);
   function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
   function openCount(t,d){return hours.filter(function(h){return state(key(t,d,h))==='open'}).length}
+  // Fields a Booked slot should have; empty ones are flagged red in the editor and the table.
+  var REQ = ['company','name','email','phone','address'];
+  var REQ_LABEL = {company:'Company', name:'Contact', email:'Email', phone:'Phone', address:'Location'};
+  var REQ_INPUT = {company:'fCo', name:'fName', email:'fEmail', phone:'fPhone', address:'fAddr'};
+  function missingOf(info){ return REQ.filter(function(f){ return !(info[f]||'').trim(); }); }
   function sorted(o){var r={};Object.keys(o).sort().forEach(function(k){r[k]=o[k]});return r}
   function snap(){return JSON.stringify({s:sorted(slots),d:sorted(details)})}
   function savedOf(k){try{var o=JSON.parse(savedSnap);return JSON.stringify([o.s[k]||'open',o.d[k]||null])}catch(e){return ''}}
@@ -287,7 +298,8 @@ textarea{resize:vertical;min-height:60px}
   function slotBtn(t,d,h,suffix){
     var k=key(t,d,h), st=state(k), info=admin?details[k]:null;
     var changed=admin && savedOf(k)!==JSON.stringify([st,details[k]||null]);
-    var b=el('button','slot '+st+(picked===k?' picked':'')+(changed?' changed':''));
+    var miss=(admin && st==='booked')? missingOf(details[k]||{}) : [];
+    var b=el('button','slot '+st+(picked===k?' picked':'')+(changed?' changed':'')+(miss.length&&!changed?' incomplete':''));
     b.type='button'; b.id='slot-'+k.replace('|','-')+suffix;
     b.appendChild(el('span','t',pad(h)+':00 – '+pad(h+1)+':00'));
     b.appendChild(el('span','s',picked===k?'Selected':LABEL[st]));
@@ -297,6 +309,7 @@ textarea{resize:vertical;min-height:60px}
       who.forEach(function(x){b.appendChild(el('span','pp',x))});
       if(info.note) b.appendChild(el('span','pp',info.note));
     }
+    if(miss.length) b.appendChild(el('span','miss','Missing: '+miss.map(function(f){return REQ_LABEL[f]}).join(', ')));
     var p=parts(d);
     b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00 to '+pad(h+1)+':00, '+LABEL[st]+(info&&info.company?', '+info.company:''));
     if(!admin && st!=='open'){b.disabled=true;return b;}
@@ -439,6 +452,7 @@ textarea{resize:vertical;min-height:60px}
     $('fStatus').value=state(k)==='open'?'booked':state(k);
     $('fCo').value=info.company||''; $('fName').value=info.name||'';
     $('fEmail').value=info.email||''; $('fPhone').value=info.phone||''; $('fAddr').value=info.address||''; $('fNote').value=info.note||'';
+    applyWarned=false; markMissing(false);
     var list=$('coList'); list.textContent='';
     Object.keys(partners()).sort(function(a,b){return a.localeCompare(b)}).forEach(function(c){ var o=document.createElement('option'); o.value=c; list.appendChild(o); });
     $('dlg').showModal(); $('fCo').focus();
@@ -454,11 +468,29 @@ textarea{resize:vertical;min-height:60px}
     if(!p) return;
     $('fName').value=p.name||''; $('fEmail').value=p.email||''; $('fPhone').value=p.phone||''; $('fAddr').value=p.address||'';
   });
+  var applyWarned=false;
+  function formInfo(){
+    return {company:$('fCo').value.trim(),name:$('fName').value.trim(),email:$('fEmail').value.trim(),phone:$('fPhone').value.trim(),address:$('fAddr').value.trim(),note:$('fNote').value.trim()};
+  }
+  // show = true: paint every empty required field red (only for Booked). Returns the missing list.
+  function markMissing(show){
+    var miss = ($('fStatus').value==='booked') ? missingOf(formInfo()) : [];
+    REQ.forEach(function(f){ $(REQ_INPUT[f]).closest('.field').classList.toggle('missing', show && miss.indexOf(f)>=0); });
+    var m=$('dlgMsg');
+    if(show && miss.length){ m.hidden=false; m.textContent='Missing: '+miss.map(function(f){return REQ_LABEL[f]}).join(', ')+'. Fill them in, or press Apply again to save without them.'; }
+    else { m.hidden=true; m.textContent=''; }
+    return miss;
+  }
+  ['fCo','fName','fEmail','fPhone','fAddr','fStatus'].forEach(function(id){
+    $(id).addEventListener(id==='fStatus'?'change':'input',function(){ if(applyWarned) markMissing(true); });
+  });
   $('dlgCancel').addEventListener('click',function(){ $('dlg').close(); });
   $('dlgForm').addEventListener('submit',function(e){
     e.preventDefault();
+    var miss=markMissing(true);
+    if(miss.length && !applyWarned){ applyWarned=true; $(REQ_INPUT[miss[0]]).focus(); return; }
     var k=editing, st=$('fStatus').value;
-    var info={company:$('fCo').value.trim(),name:$('fName').value.trim(),email:$('fEmail').value.trim(),phone:$('fPhone').value.trim(),address:$('fAddr').value.trim(),note:$('fNote').value.trim()};
+    var info=formInfo();
     Object.keys(info).forEach(function(x){ if(!info[x]) delete info[x]; });
     if(st==='open'){ delete slots[k]; delete details[k]; }
     else { slots[k]=st; if(Object.keys(info).length) details[k]=info; else delete details[k]; }
