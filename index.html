@@ -169,7 +169,7 @@ textarea{resize:vertical;min-height:60px}
       <button class="btn" id="loginBtn" type="button">Unlock</button>
     </div>
     <div id="editRow" class="row" hidden>
-      <span class="msg">Click any slot to set its status and the partner's company and contact.</span>
+      <span class="msg">Click any slot to set its status and partner details. Apply saves to GitHub right away.</span>
       <span style="flex:1"></span>
       <button class="btn ghost" id="discardBtn" type="button" disabled>Discard</button>
       <button class="btn" id="saveBtn" type="button" disabled>Save bookings</button>
@@ -374,6 +374,7 @@ textarea{resize:vertical;min-height:60px}
     $('updated').textContent=(u?'Last updated '+new Date(u).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})+' PT. ':'')+'Times shown in '+C.tz+'.';
     var dirty=snap()!==savedSnap;
     $('saveBtn').disabled=!dirty||saving; $('discardBtn').disabled=!dirty||saving;
+    if(savedSnap) backupDraft();
   }
 
   // ---- load ----
@@ -399,6 +400,7 @@ textarea{resize:vertical;min-height:60px}
       slots=remote.slots||{};
       details=(admin&&pass)? await decryptDetails(remote.details,pass) : {};
       savedSnap=snap();
+      if(admin && restoreDraft()) msg('Restored edits from this browser that were not saved yet. Press Save bookings to store them.',true);
       status.textContent=''; status.className='status';
     }catch(e){
       status.textContent='Could not load the latest bookings. Refresh the page to try again.'; status.className='status err';
@@ -439,7 +441,7 @@ textarea{resize:vertical;min-height:60px}
   ['tokenInput','passInput'].forEach(function(id){ $(id).addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('loginBtn').click(); } }); });
   $('logoutBtn').addEventListener('click',function(){
     token=null; pass=null; admin=false; details={};
-    store('avail-admin-token',null); store('avail-admin-pass',null);
+    store('avail-admin-token',null); store('avail-admin-pass',null); store('avail-draft',null);
     $('tokenInput').value=''; $('passInput').value='';
     $('loginRow').hidden=false; $('editRow').hidden=true; msg('Locked.');
     load();
@@ -494,11 +496,41 @@ textarea{resize:vertical;min-height:60px}
     Object.keys(info).forEach(function(x){ if(!info[x]) delete info[x]; });
     if(st==='open'){ delete slots[k]; delete details[k]; }
     else { slots[k]=st; if(Object.keys(info).length) details[k]=info; else delete details[k]; }
-    $('dlg').close(); render(); msg('Changed. Press Save bookings to publish.');
+    $('dlg').close(); render();
     var b=$('slot-'+k.replace('|','-')); if(b) b.focus();
+    save();  // every Apply is written to GitHub straight away
   });
 
-  $('saveBtn').addEventListener('click',async function(){
+  // Local changes = slots whose status or details differ from the last saved copy.
+  function localChanges(){
+    var o=JSON.parse(savedSnap), ch={};
+    var keys={}; [slots,details,o.s,o.d].forEach(function(m){ Object.keys(m).forEach(function(k){ keys[k]=1; }); });
+    Object.keys(keys).forEach(function(k){
+      if(JSON.stringify([slots[k]||null,details[k]||null])!==JSON.stringify([o.s[k]||null,o.d[k]||null])) ch[k]={s:slots[k]||null,d:details[k]||null};
+    });
+    return ch;
+  }
+  function applyChanges(ch){
+    Object.keys(ch).forEach(function(k){
+      if(ch[k].s) slots[k]=ch[k].s; else delete slots[k];
+      if(ch[k].d) details[k]=ch[k].d; else delete details[k];
+    });
+  }
+  // Unsaved edits are mirrored to this browser so a failed save or a reload never loses them.
+  function backupDraft(){
+    if(!admin) return;
+    var ch=localChanges();
+    store('avail-draft', Object.keys(ch).length ? JSON.stringify(ch) : null);
+  }
+  function restoreDraft(){
+    var raw=store('avail-draft'); if(!raw) return false;
+    try{ var ch=JSON.parse(raw); if(!Object.keys(ch).length) return false; applyChanges(ch); return true; }catch(e){ return false; }
+  }
+
+  var saveAgain=false;
+  async function save(retried){
+    if(saving){ saveAgain=true; return; }
+    if(snap()===savedSnap) return;
     saving=true; render(); msg('Saving…');
     try{
       var clean={}; Object.keys(details).forEach(function(k){ if(slots[k]) clean[k]=details[k]; }); details=clean;
@@ -509,11 +541,17 @@ textarea{resize:vertical;min-height:60px}
       var r=await fetch(API,{method:'PUT',headers:Object.assign(headers(),{'Content-Type':'application/json'}),body:JSON.stringify(payload)});
       var j=await r.json().catch(function(){return {}});
       saving=false;
-      if(r.ok){ sha=j.content.sha; remote=body; savedSnap=snap(); render(); msg('Saved. Partners see Booked when they open or refresh the page; the details stay encrypted.'); }
-      else if(r.status===409||r.status===422){ msg('Someone else saved first. The latest bookings are loaded; make your change again and save.',true); await load(); }
-      else { render(); msg('Save failed (GitHub error '+r.status+'). Your changes are still here; try again.',true); }
-    }catch(e){ saving=false; render(); msg('Save failed: no connection to GitHub. Your changes are still here; try again.',true); }
-  });
+      if(r.ok){
+        sha=j.content.sha; remote=body; savedSnap=snap(); store('avail-draft',null); render();
+        msg('Saved to GitHub. Partners see Booked when they open or refresh the page; the details stay encrypted.');
+      } else if((r.status===409||r.status===422) && !retried){
+        // someone saved in between: load theirs, re-apply only my edits on top, save once more
+        var ch=localChanges(); await load(); applyChanges(ch); render(); saving=false; await save(true); return;
+      } else { render(); msg('Save failed (GitHub error '+r.status+'). Your changes are kept in this browser; press Save bookings to retry.',true); }
+    }catch(e){ saving=false; render(); msg('Save failed: no connection to GitHub. Your changes are kept in this browser; press Save bookings to retry.',true); }
+    if(saveAgain){ saveAgain=false; save(); }
+  }
+  $('saveBtn').addEventListener('click',function(){ save(); });
 
   // The login box stays hidden until the small "Admin" button in the footer (or #admin in the URL) opens it.
   function showAdmin(){
