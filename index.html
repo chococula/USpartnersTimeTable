@@ -10,11 +10,12 @@
 :root{
   color-scheme:light;
   --ink:#16202e; --muted:#5d6878; --ground:#f3f5f8; --sheet:#ffffff; --rule:#dce1e8; --rule-strong:#b9c2cf;
-  --accent:#2b5fd9;
+  --accent:#2b5fd9; --danger:#c0392b;
   --qa:#3b4fa8; --dev:#7a3fa0;
   --open:#1f8a5b; --open-bg:#e5f4ec;
   --hold:#a96a00; --hold-bg:#fbf0d9;
   --busy:#8a94a3; --busy-bg:#eceff3;
+  --booked:#4a5463; --booked-bg:#d9dee5;
   --f-display:"Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
 }
@@ -22,11 +23,12 @@
   :root{
     color-scheme:dark;
     --ink:#e7ebf1; --muted:#9aa5b5; --ground:#10151d; --sheet:#171e28; --rule:#2a3442; --rule-strong:#475366;
-    --accent:#7aa2ff;
+    --accent:#7aa2ff; --danger:#ff8a7a;
     --qa:#9aabff; --dev:#d29cf2;
     --open:#5fd39b; --open-bg:#173527;
     --hold:#f0b54a; --hold-bg:#3a2c10;
     --busy:#6f7a8a; --busy-bg:#1f2732;
+    --booked:#b3bccb; --booked-bg:#2c3644;
   }
 }
 *{box-sizing:border-box}
@@ -44,11 +46,14 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
 .tk{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
 .total .tk.qa,.trackhead .tk.qa{color:var(--qa)}
 .total .tk.dev,.trackhead .tk.dev{color:var(--dev)}
-.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted);align-items:center}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .lg-open{background:var(--open-bg);box-shadow:inset 0 0 0 1.5px var(--open)}
+.lg-booked{background:var(--booked-bg);box-shadow:inset 0 0 0 1.5px var(--booked)}
 .lg-hold{background:var(--hold-bg);box-shadow:inset 0 0 0 1.5px var(--hold)}
 .lg-busy{background:var(--busy-bg);box-shadow:inset 0 0 0 1.5px var(--busy)}
+.status{margin-left:auto;font-size:12.5px}
+.status.err{color:var(--danger)}
 
 .board-scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--sheet)}
 .board{display:grid;grid-template-columns:64px repeat(10,minmax(100px,1fr));min-width:1080px}
@@ -69,17 +74,33 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
 .slot .t{font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
 .slot .s{font-size:12px;font-weight:600;letter-spacing:.02em}
 .slot.open{background:var(--open-bg);color:var(--open);box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--open) 45%,transparent)}
+.slot.booked{background:var(--booked-bg);color:var(--booked);cursor:default}
+.slot.booked .s::before{content:"● ";font-size:9px;vertical-align:1px}
 .slot.hold{background:var(--hold-bg);color:var(--hold);cursor:default;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--hold) 45%,transparent)}
 .slot.busy{background:var(--busy-bg);color:var(--busy);cursor:default}
 .slot.busy .t{text-decoration:line-through}
 .slot.open:hover{box-shadow:inset 0 0 0 2px var(--open)}
 .slot.picked{box-shadow:inset 0 0 0 2.5px var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--sheet));color:var(--accent)}
+.slot.changed{box-shadow:inset 0 0 0 2px var(--accent)}
+.admin .slot{cursor:pointer}
 .slot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .panel{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:18px 20px}
 .panel p{margin:0;max-width:72ch}
 .panel .pick{font-family:var(--f-mono);font-size:14px;color:var(--accent);font-weight:500}
 .foot{font-size:13px;color:var(--muted);margin:0}
+
+.adminbox{border-color:color-mix(in srgb,var(--accent) 50%,var(--rule));display:flex;flex-direction:column;gap:12px}
+.adminbox h2{font-size:16px;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.adminbox input{font:inherit;font-family:var(--f-mono);font-size:13px;padding:8px 10px;border-radius:7px;border:1px solid var(--rule-strong);background:var(--ground);color:var(--ink);min-width:0;flex:1 1 260px;max-width:440px}
+.adminbox input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{all:unset;cursor:pointer;font-weight:600;font-size:14px;padding:8px 16px;border-radius:7px;background:var(--accent);color:var(--sheet)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule-strong)}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.msg{font-size:13px;color:var(--muted)}
+.msg.err{color:var(--danger)}
 
 .cards{display:none;flex-direction:column;gap:14px}
 .daycard{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
@@ -105,10 +126,29 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
     </div>
     <div class="totals" id="totals"></div>
   </header>
+
+  <div class="panel adminbox" id="adminBox" hidden>
+    <h2>Manage bookings</h2>
+    <div id="loginRow" class="row">
+      <input id="tokenInput" type="password" autocomplete="off" placeholder="Admin token" aria-label="Admin token">
+      <button class="btn" id="loginBtn" type="button">Unlock</button>
+    </div>
+    <div id="editRow" class="row" hidden>
+      <span class="msg">Click a slot to cycle Open → Booked → Held → Unavailable.</span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="discardBtn" type="button" disabled>Discard</button>
+      <button class="btn" id="saveBtn" type="button" disabled>Save bookings</button>
+      <button class="btn ghost" id="logoutBtn" type="button">Lock</button>
+    </div>
+    <p class="msg" id="adminMsg"></p>
+  </div>
+
   <div class="legend">
     <span><i class="lg-open"></i>Open</span>
+    <span><i class="lg-booked"></i>Booked</span>
     <span><i class="lg-hold"></i>Tentatively held</span>
     <span><i class="lg-busy"></i>Unavailable</span>
+    <span class="status" id="loadStatus">Loading latest bookings…</span>
   </div>
   <div class="board-scroll"><div class="board" id="board"></div></div>
   <div class="cards" id="cards"></div>
@@ -117,14 +157,15 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
 </div>
 
 <!--
-  EDIT AVAILABILITY HERE.
-  "slots" lists only the slots that are NOT open.
-  Key = "<track>|YYYY-MM-DDTHH" (track id "qa" or "dev", start hour in 24h).
-  Value = "hold" (tentatively held) or "busy" (unavailable).
-  Example: "slots": {"qa|2026-12-01T10": "busy", "dev|2026-12-02T14": "hold"}
+  Layout config. Bookings live in slots.json (edited from the #admin view, or by hand).
+  slots.json key = "<track>|YYYY-MM-DDTHH" (track "qa" or "dev", start hour 24h);
+  value = "booked", "hold" or "busy". Open slots are simply absent.
 -->
-<script id="state" type="application/json">
+<script id="config" type="application/json">
 {
+  "repo": "chococula/USpartnersTimeTable",
+  "branch": "main",
+  "file": "slots.json",
   "tz": "PST (UTC−8)",
   "tracks": [
     {"id": "qa", "name": "SW QA"},
@@ -132,38 +173,46 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
   ],
   "days": ["2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"],
   "startHour": 9,
-  "endHour": 17,
-  "slots": {},
-  "updated": "2026-11-11"
+  "endHour": 17
 }
 </script>
 <script>
 (function(){
-  var S = JSON.parse(document.getElementById('state').textContent);
-  var picked = null;
+  var C = JSON.parse(document.getElementById('config').textContent);
+  var slots = {}, savedJSON = '{}', updated = null, sha = null;
+  var picked = null, admin = false, token = null, saving = false;
+  var API = 'https://api.github.com/repos/'+C.repo+'/contents/'+C.file;
   var DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var LABEL = {open:'Open', hold:'Held', busy:'Unavailable'};
-  var TRACK = {}; S.tracks.forEach(function(t){TRACK[t.id]=t.name});
+  var LABEL = {open:'Open', booked:'Booked', hold:'Held', busy:'Unavailable'};
+  var NEXT = {open:'booked', booked:'hold', hold:'busy', busy:'open'};
+  var TRACK = {}; C.tracks.forEach(function(t){TRACK[t.id]=t.name});
+  var $ = function(id){return document.getElementById(id)};
   function pad(n){return (n<10?'0':'')+n}
   function parts(iso){var p=iso.split('-').map(Number);var d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return {dow:DOW[d.getUTCDay()],mon:MON[p[1]-1],day:p[2]}}
   function key(t,d,h){return t+'|'+d+'T'+pad(h)}
-  function state(k){return S.slots[k]||'open'}
-  var hours=[];for(var h=S.startHour;h<S.endHour;h++)hours.push(h);
+  function state(k){return slots[k]||'open'}
+  var hours=[];for(var h=C.startHour;h<C.endHour;h++)hours.push(h);
   function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
   function openCount(t,d){return hours.filter(function(h){return state(key(t,d,h))==='open'}).length}
+  function savedState(k){try{return JSON.parse(savedJSON)[k]||'open'}catch(e){return 'open'}}
+  function store(get,k,v){try{ if(get) return localStorage.getItem(k); if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v);}catch(e){return null}}
 
   function slotBtn(t,d,h,suffix){
-    var k=key(t,d,h), st=state(k), b=el('button','slot '+st+(picked===k?' picked':''));
+    var k=key(t,d,h), st=state(k);
+    var cls='slot '+st+(picked===k?' picked':'')+(admin&&st!==savedState(k)?' changed':'');
+    var b=el('button',cls);
     b.type='button'; b.id='slot-'+k.replace('|','-')+suffix;
     b.appendChild(el('span','t',pad(h)+':00 – '+pad(h+1)+':00'));
     b.appendChild(el('span','s',picked===k?'Selected':LABEL[st]));
     var p=parts(d);
     b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00 to '+pad(h+1)+':00, '+LABEL[st]);
-    if(st!=='open'){b.disabled=true;return b;}
+    if(!admin && st!=='open'){b.disabled=true;return b;}
     b.addEventListener('click',function(){
-      picked=(picked===k?null:k); render();
-      var again=document.getElementById(b.id); if(again) again.focus();
+      if(admin){ var n=NEXT[st]; if(n==='open') delete slots[k]; else slots[k]=n; }
+      else picked=(picked===k?null:k);
+      render();
+      var again=$(b.id); if(again) again.focus();
     });
     return b;
   }
@@ -180,51 +229,134 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
   }
 
   function render(){
-    var board=document.getElementById('board'); board.textContent='';
+    document.body.classList.toggle('admin',admin);
+    var board=$('board'); board.textContent='';
     board.appendChild(el('div','corner r1'));
-    S.days.forEach(function(d){board.appendChild(dayHead(d,' r1 first'))});
-    S.days.forEach(function(d){
-      S.tracks.forEach(function(t,i){board.appendChild(trackHead(t.id,d,i===0?' first':' second'))});
+    C.days.forEach(function(d){board.appendChild(dayHead(d,' r1 first'))});
+    C.days.forEach(function(d){
+      C.tracks.forEach(function(t,i){board.appendChild(trackHead(t.id,d,i===0?' first':' second'))});
     });
     hours.forEach(function(h){
       board.appendChild(el('div','tcol',pad(h)+':00'));
-      S.days.forEach(function(d){
-        S.tracks.forEach(function(t,i){
+      C.days.forEach(function(d){
+        C.tracks.forEach(function(t,i){
           var c=el('div','cell'+(i===0?' first':' second'));c.appendChild(slotBtn(t.id,d,h,''));board.appendChild(c);
         });
       });
     });
-    var cards=document.getElementById('cards'); cards.textContent='';
-    S.days.forEach(function(d){
+    var cards=$('cards'); cards.textContent='';
+    C.days.forEach(function(d){
       var card=el('div','daycard'); card.appendChild(dayHead(d));
       var cols=el('div','cols');
-      S.tracks.forEach(function(t){
+      C.tracks.forEach(function(t){
         var col=el('div','col'); col.appendChild(trackHead(t.id,d));
         hours.forEach(function(h){col.appendChild(slotBtn(t.id,d,h,'-m'))});
         cols.appendChild(col);
       });
       card.appendChild(cols); cards.appendChild(card);
     });
-    var totals=document.getElementById('totals'); totals.textContent='';
-    S.tracks.forEach(function(t){
-      var n=0; S.days.forEach(function(d){n+=openCount(t.id,d)});
+    var totals=$('totals'); totals.textContent='';
+    C.tracks.forEach(function(t){
+      var n=0; C.days.forEach(function(d){n+=openCount(t.id,d)});
       var box=el('div','total');
       box.appendChild(el('span','tk '+t.id,t.name));
       box.appendChild(el('b',null,String(n)));
-      box.appendChild(el('span',null,'of '+(S.days.length*hours.length)+' open'));
+      box.appendChild(el('span',null,'of '+(C.days.length*hours.length)+' open'));
       totals.appendChild(box);
     });
-    document.getElementById('tz').textContent=S.tz;
-    var pt=document.getElementById('pickText');
+    $('tz').textContent=C.tz;
+    if(picked && state(picked)!=='open') picked=null;
+    var pt=$('pickText');
     if(picked){
-      var t=picked.split('|')[0], rest=picked.split('|')[1], d=rest.slice(0,10), h=Number(rest.slice(11)), p=parts(d);
+      var t=picked.split('|')[0], rest=picked.split('|')[1], d=rest.slice(0,10), hh=Number(rest.slice(11)), p=parts(d);
       pt.textContent='Your pick: ';
-      pt.appendChild(el('span','pick',TRACK[t]+' · '+p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00–'+pad(h+1)+':00 '+S.tz));
-    } else pt.textContent='No slot selected yet. Pick an open block above.';
-    var u=parts(S.updated);
-    document.getElementById('updated').textContent='Last updated '+u.mon+' '+u.day+'. Times shown in '+S.tz+'.';
+      pt.appendChild(el('span','pick',TRACK[t]+' · '+p.dow+' '+p.mon+' '+p.day+', '+pad(hh)+':00–'+pad(hh+1)+':00 '+C.tz));
+    } else pt.textContent=admin?'Admin view. Partners cannot select Booked, Held or Unavailable slots.':'No slot selected yet. Pick an open block above.';
+    $('updated').textContent=(updated?'Last updated '+new Date(updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})+' PT. ':'')+'Times shown in '+C.tz+'.';
+    var dirty=JSON.stringify(sorted(slots))!==savedJSON;
+    $('saveBtn').disabled=!dirty||saving; $('discardBtn').disabled=!dirty||saving;
   }
+  function sorted(o){var r={};Object.keys(o).sort().forEach(function(k){r[k]=o[k]});return r}
+  function apply(data){
+    slots = (data && data.slots) || {}; updated = data && data.updated || null;
+    savedJSON = JSON.stringify(sorted(slots));
+  }
+  function b64decode(s){return decodeURIComponent(escape(atob(s.replace(/\n/g,''))))}
+  function b64encode(s){return btoa(unescape(encodeURIComponent(s)))}
+  function headers(){var h={'Accept':'application/vnd.github+json'}; if(token) h.Authorization='Bearer '+token; return h}
+
+  function load(){
+    var status=$('loadStatus');
+    return fetch(API+'?ref='+C.branch+'&t='+Date.now(),{headers:headers(),cache:'no-store'})
+      .then(function(r){ if(r.status===404) return null; if(!r.ok) throw new Error('api '+r.status); return r.json(); })
+      .then(function(j){
+        if(j){ sha=j.sha; apply(JSON.parse(b64decode(j.content))); } else { sha=null; apply(null); }
+        status.textContent=''; status.className='status';
+      })
+      .catch(function(){
+        // fall back to the Pages copy (may lag about a minute behind)
+        return fetch(C.file+'?t='+Date.now(),{cache:'no-store'})
+          .then(function(r){ if(!r.ok) throw 0; return r.json(); })
+          .then(function(j){ apply(j); status.textContent=''; })
+          .catch(function(){ status.textContent='Could not load the latest bookings. Refresh the page to try again.'; status.className='status err'; });
+      })
+      .then(render);
+  }
+
+  // ---- admin ----
+  function msg(t,err){var m=$('adminMsg'); m.textContent=t||''; m.className='msg'+(err?' err':'');}
+  function enterAdmin(){
+    admin=true; picked=null;
+    $('loginRow').hidden=true; $('editRow').hidden=false;
+    msg('Unlocked. Changes are outlined in blue until you save.');
+    load();
+  }
+  function unlock(t){
+    msg('Checking token…');
+    return fetch('https://api.github.com/repos/'+C.repo,{headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+t}})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function(j){
+        if(!(j.permissions && j.permissions.push)) throw new Error('nopush');
+        token=t; store(false,'avail-admin-token',t); enterAdmin();
+      })
+      .catch(function(e){
+        store(false,'avail-admin-token',null);
+        msg(e.message==='nopush'?'This token can read the repository but cannot write to it. Give it Contents: Read and write.':'That token was not accepted. Check it and try again.',true);
+      });
+  }
+  $('loginBtn').addEventListener('click',function(){ var t=$('tokenInput').value.trim(); if(t) unlock(t); });
+  $('tokenInput').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('loginBtn').click(); } });
+  $('logoutBtn').addEventListener('click',function(){
+    token=null; admin=false; store(false,'avail-admin-token',null);
+    $('tokenInput').value=''; $('loginRow').hidden=false; $('editRow').hidden=true; msg('Locked.');
+    load();
+  });
+  $('discardBtn').addEventListener('click',function(){ slots=JSON.parse(savedJSON); render(); msg('Changes discarded.'); });
+  $('saveBtn').addEventListener('click',function(){
+    saving=true; render(); msg('Saving…');
+    var body={slots:sorted(slots),updated:new Date().toISOString()};
+    var payload={message:'Update bookings',content:b64encode(JSON.stringify(body,null,2)+'\n'),branch:C.branch};
+    if(sha) payload.sha=sha;
+    fetch(API,{method:'PUT',headers:Object.assign(headers(),{'Content-Type':'application/json'}),body:JSON.stringify(payload)})
+      .then(function(r){ return r.json().then(function(j){ return {ok:r.ok,status:r.status,j:j}; }); })
+      .then(function(res){
+        saving=false;
+        if(res.ok){ sha=res.j.content.sha; apply(body); render(); msg('Saved. Partners see the change when they open or refresh the page.'); }
+        else if(res.status===409||res.status===422){ msg('Someone else saved first. The latest bookings are loaded; make your change again and save.',true); load(); }
+        else { render(); msg('Save failed (GitHub error '+res.status+'). Your changes are still here; try again.',true); }
+      })
+      .catch(function(){ saving=false; render(); msg('Save failed: no connection to GitHub. Your changes are still here; try again.',true); });
+  });
+  function checkHash(){
+    var on=location.hash==='#admin';
+    $('adminBox').hidden=!on;
+    if(on && !admin){ var t=store(true,'avail-admin-token'); if(t) unlock(t); }
+  }
+  window.addEventListener('hashchange',checkHash);
+
   render();
+  load();
+  checkHash();
 })();
 </script>
 </body>
