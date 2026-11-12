@@ -39,9 +39,22 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--f-disp
 body.admin{background:var(--admin-ground)}
 .adminbar{display:none;position:sticky;top:0;z-index:5;margin-left:calc(-1 * max(16px, env(safe-area-inset-left, 0px)));margin-right:calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
   padding:8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));background:var(--admin-bar);color:var(--admin-bar-ink);
-  font-family:var(--f-mono);font-size:12.5px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;text-align:center}
-body.admin .adminbar{display:block}
-.wrap{max-width:1280px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:28px}
+  font-size:13px;align-items:center;gap:8px 14px;flex-wrap:wrap}
+body.admin .adminbar{display:flex}
+.ab-label{font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.ab-msg{flex:1 1 200px;min-width:0;opacity:.95}
+.ab-msg.err{font-weight:700}
+.ab-btns{display:flex;gap:6px;flex-wrap:wrap}
+.abtn{all:unset;cursor:pointer;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:5px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--admin-bar-ink) 55%,transparent)}
+.abtn.primary{background:var(--admin-bar-ink);color:var(--admin-bar)}
+.abtn[disabled]{opacity:.4;cursor:default}
+.abtn:focus-visible{outline:2px solid var(--admin-bar-ink);outline-offset:2px}
+.admincorner{position:absolute;top:10px;right:0;z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.admincorner .adminlink{opacity:.5}
+.popover{width:min(280px, calc(100vw - 32px));background:var(--sheet);border:1px solid var(--rule-strong);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 28px rgba(10,15,25,.18)}
+.popover input{font-family:var(--f-mono);font-size:13px;width:100%}
+.popover .msg{font-size:12px}
+.wrap{position:relative;max-width:1280px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:28px}
 header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px}
 .eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
 h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance}
@@ -150,8 +163,26 @@ textarea{resize:vertical;min-height:60px}
 </style>
 </head>
 <body>
-<div class="adminbar" role="status">Admin mode · partner details visible · partners never see this view</div>
+<div class="adminbar" role="region" aria-label="Admin controls">
+  <span class="ab-label">Admin mode</span>
+  <span class="ab-msg" id="adminMsg" role="status">Click a slot to edit. Apply saves to GitHub.</span>
+  <span class="ab-btns">
+    <button class="abtn" id="discardBtn" type="button" disabled>Discard</button>
+    <button class="abtn primary" id="saveBtn" type="button" disabled>Save</button>
+    <button class="abtn" id="logoutBtn" type="button" title="Exit and forget the token on this browser">Lock</button>
+    <button class="abtn" id="exitBtn" type="button" title="Back to the partner view">Exit</button>
+  </span>
+</div>
 <div class="wrap">
+  <div class="admincorner">
+    <button class="adminlink" id="adminToggle" type="button" aria-expanded="false" aria-controls="adminBox">Admin</button>
+    <div class="popover" id="adminBox" hidden>
+      <input id="tokenInput" type="password" autocomplete="off" placeholder="GitHub token" aria-label="GitHub token">
+      <input id="passInput" type="password" autocomplete="off" placeholder="Admin passphrase" aria-label="Admin passphrase">
+      <button class="btn" id="loginBtn" type="button">Unlock</button>
+      <p class="msg" id="loginMsg"></p>
+    </div>
+  </div>
   <header>
     <div>
       <p class="eyebrow">Mon Nov 30 – Fri Dec 4, 2026 · <span id="tz">PST (UTC−8)</span></p>
@@ -159,23 +190,6 @@ textarea{resize:vertical;min-height:60px}
     </div>
     <div class="totals" id="totals"></div>
   </header>
-
-  <div class="panel adminbox" id="adminBox" hidden>
-    <h2>Manage bookings</h2>
-    <div id="loginRow" class="row">
-      <input id="tokenInput" type="password" autocomplete="off" placeholder="GitHub token" aria-label="GitHub token">
-      <input id="passInput" type="password" autocomplete="off" placeholder="Admin passphrase" aria-label="Admin passphrase">
-      <button class="btn" id="loginBtn" type="button">Unlock</button>
-    </div>
-    <div id="editRow" class="row" hidden>
-      <span class="msg">Click any slot to set its status and partner details. Apply saves to GitHub right away.</span>
-      <span style="flex:1"></span>
-      <button class="btn ghost" id="discardBtn" type="button" disabled>Discard</button>
-      <button class="btn" id="saveBtn" type="button" disabled>Save bookings</button>
-      <button class="btn ghost" id="logoutBtn" type="button">Lock</button>
-    </div>
-    <p class="msg" id="adminMsg">Partner details are encrypted with the passphrase before they are saved. Only someone with the passphrase can read them.</p>
-  </div>
 
   <div class="legend">
     <span><i class="lg-open"></i>Open</span>
@@ -187,10 +201,7 @@ textarea{resize:vertical;min-height:60px}
   <div class="board-scroll"><div class="board" id="board"></div></div>
   <div class="cards" id="cards"></div>
   <div class="panel"><p id="pickText">No slot selected yet. Pick an open block above.</p></div>
-  <div class="footrow">
-    <p class="foot" id="updated"></p>
-    <button class="adminlink" id="adminToggle" type="button">Admin</button>
-  </div>
+  <p class="foot" id="updated"></p>
 </div>
 
 <dialog id="dlg">
@@ -408,7 +419,11 @@ textarea{resize:vertical;min-height:60px}
   }
 
   // ---- admin ----
-  function msg(t,err){var m=$('adminMsg'); m.textContent=t||''; m.className='msg'+(err?' err':'');}
+  function msg(t,err){
+    var m=$(admin?'adminMsg':'loginMsg');
+    m.textContent=t||(admin?'Click a slot to edit. Apply saves to GitHub.':'');
+    m.className=(admin?'ab-msg':'msg')+(err?' err':'');
+  }
   async function unlock(t,p){
     msg('Checking…');
     try{
@@ -421,8 +436,8 @@ textarea{resize:vertical;min-height:60px}
       try{ await decryptDetails(data.details,p); }catch(e){ throw new Error('pass'); }
       pass=p; admin=true; picked=null;
       store('avail-admin-token',t); store('avail-admin-pass',p);
-      $('loginRow').hidden=true; $('editRow').hidden=false;
-      msg(data.details?'Unlocked. Unsaved changes are outlined in blue.':'Unlocked. This passphrase will encrypt partner details from now on. Keep it safe: without it the details cannot be recovered.');
+      closePopover(); $('adminToggle').hidden=true;
+      msg(data.details?'Click a slot to edit. Apply saves to GitHub.':'Unlocked. This passphrase will encrypt partner details from now on. Keep it safe: without it the details cannot be recovered.');
       await load();
     }catch(e){
       token=null; store('avail-admin-token',null); store('avail-admin-pass',null);
@@ -430,6 +445,7 @@ textarea{resize:vertical;min-height:60px}
              nopush:'This token can read the repository but cannot write to it. Give it Contents: Read and write.',
              pass:'The passphrase does not match the one used for the saved details.'}[e.message]||'Unlock failed. Check your connection and try again.';
       msg(m,true);
+      $('adminBox').hidden=false; $('adminToggle').setAttribute('aria-expanded','true');
     }
   }
   $('loginBtn').addEventListener('click',function(){
@@ -442,7 +458,7 @@ textarea{resize:vertical;min-height:60px}
     token=null; pass=null; admin=false; details={};
     store('avail-admin-token',null); store('avail-admin-pass',null); store('avail-draft',null);
     $('tokenInput').value=''; $('passInput').value='';
-    $('loginRow').hidden=false; $('editRow').hidden=true; msg('Locked.');
+    $('adminToggle').hidden=false; msg('');
     load();
   });
   $('discardBtn').addEventListener('click',function(){ var o=JSON.parse(savedSnap); slots=o.s; details=o.d; render(); msg('Changes discarded.'); });
@@ -552,30 +568,28 @@ textarea{resize:vertical;min-height:60px}
   }
   $('saveBtn').addEventListener('click',function(){ save(); });
 
-  // The login box stays hidden until the small "Admin" button in the footer (or #admin in the URL) opens it.
-  function showAdmin(){
-    $('adminBox').hidden=false;
-    $('adminToggle').textContent='Hide admin';
-    if(!admin){
-      var t=store('avail-admin-token'), p=store('avail-admin-pass');
-      if(t&&p) unlock(t,p); else $('tokenInput').focus();
-    }
-    $('adminBox').scrollIntoView({block:'start',behavior:'smooth'});
+  // A small "Admin" button in the top-right corner opens a compact login popover.
+  // Once unlocked, all controls live in the orange admin bar.
+  function closePopover(){ $('adminBox').hidden=true; $('adminToggle').setAttribute('aria-expanded','false'); }
+  function openAdmin(){
+    var t=store('avail-admin-token'), p=store('avail-admin-pass');
+    if(t&&p){ unlock(t,p); return; }   // this browser already has a saved login
+    $('adminBox').hidden=false; $('adminToggle').setAttribute('aria-expanded','true'); $('tokenInput').focus();
   }
-  function hideAdmin(){
-    if(admin && snap()!==savedSnap){ msg('You have unsaved changes. Save or discard them before hiding admin.',true); $('adminBox').scrollIntoView({block:'start',behavior:'smooth'}); return; }
-    if(admin){
-      // leave admin view but keep this browser's saved login, so the next "Admin" click unlocks straight away
-      admin=false; token=null; pass=null; details={};
-      $('loginRow').hidden=false; $('editRow').hidden=true; msg('');
-      load();
-    }
-    $('adminBox').hidden=true;
-    $('adminToggle').textContent='Admin';
+  function exitAdmin(){
+    if(snap()!==savedSnap){ msg('Unsaved changes. Save or discard them first.',true); return; }
+    // back to the partner view; the saved login stays, so the next "Admin" click unlocks straight away
+    admin=false; token=null; pass=null; details={};
+    $('adminToggle').hidden=false; msg('');
     if(location.hash==='#admin') history.replaceState(null,'',location.pathname+location.search);
+    load();
   }
-  $('adminToggle').addEventListener('click',function(){ if($('adminBox').hidden) showAdmin(); else hideAdmin(); });
-  function checkHash(){ if(location.hash==='#admin' && $('adminBox').hidden) showAdmin(); }
+  $('exitBtn').addEventListener('click',exitAdmin);
+  $('adminToggle').addEventListener('click',function(e){ e.stopPropagation(); if($('adminBox').hidden) openAdmin(); else closePopover(); });
+  $('adminBox').addEventListener('click',function(e){ e.stopPropagation(); });
+  document.addEventListener('click',function(){ if(!$('adminBox').hidden) closePopover(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && !$('adminBox').hidden){ closePopover(); $('adminToggle').focus(); } });
+  function checkHash(){ if(location.hash==='#admin' && !admin) openAdmin(); }
   window.addEventListener('hashchange',checkHash);
 
   render();
