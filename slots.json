@@ -1,5 +1,6 @@
 {
   "slots": {
+    "dev|2026-12-01T11": "booked",
     "dev|2026-12-02T13": "booked",
     "dev|2026-12-02T14": "booked",
     "dev|2026-12-02T15": "booked",
@@ -12,8 +13,8 @@
   "details": {
     "v": 1,
     "salt": "GKSM/IO7OrUwkwyvAlmDhg==",
-    "iv": "ihWhdYEfCJJbAD+9",
-    "ct": "rywXVP5ZZV/OjXXPec/YF93oWqgjo7vTTUsocZCbtAsf9/S9gnwQVVXKBmEOMzQ2IPldcCSqf83NEGYnoEiknB11LcXgE7J/v8x/bIPElO8HCXHKzeqQKaV04Vfv+Gliv/kCbkBLTIxg65x1vuR1LUKOJqeTLWqztOKujHd+xTySXI3qUDSOTPghQo+i/b/hnOJY9qqpRsp8FtlnEBcMZwCkA7vNp+YUzokSWaaUNC5u32oXjsaH01E9BufXgdKokk6y3rGwyyeMigKQCP5BHo7hy3iCERzuoRzWYXw2Lnzdruk9Kx2x2mFVOF8NWRLsGDE+U8AzikosDB1edKxMjm/oiKGhrxr3qWMSMRnVr4hDYnd2ijBpw/GTovpUFsEUDuYh8uh1YORJLsjhcX/55ENZsx3SiSPx+QVThAoxzPhpfl3EOgmZAuoBEeRdpO//UYVd2d+DuNJiV099m7wDy+nZxcly0vQZ9Wz48vwlnSoOq0rlrrSnKus1FwhWLjRmil+X66fTzwx4F7cthpTn1R3uQfKNgX2CHQLDjWEd8Rc6niOf8xza5pQ8uPZLafPriS3liUXJDa3K4BoYUZvcjXVgFvJO+6tpa1DgCrjAXJQA2pMmX8dUwEgS1UJ+9YkujydsBAr3He6+3ZUfTg2Ez5FMQKyIMOPUpS3ytkVHvvzLjfVY+iGXR8yPZm4x1b6l0+gaYO4WFUFCvO5jAkvxDcaOyVEKdLvytJrrPePjhN04wgYKrf534mC0M3hJgj/1gqjkZ93+SlbzAj/g2Boaoq6mlzCq+/P7TnQAy2HP"
+    "iv": "GSNzvWOtldBV+q4h",
+    "ct": "wRaJvDeqoNaeqibg5MdfqSPjDluiC6RbxS2xlatISCIMsWxFdcYnlprbcrI2aEO/0DSiwvD4cwPCywSDb8u68iQmVdOREAqqbqjrekbBDDuxbqvJ30KC1pd4J8vEgtN2RwmlfcPhbqL9cfUYuCp1XHcGNcHsf+Nl3ofHF9vGmgwIDgQcAiiOTQ2RvL/E5md5EYUwaaa2yneshRvzAjt2Vr7j9Z8BX5peeuuAR1GQhgforQvNpfhim/gVnLSpFOSCWiFJ98/FcxM9JZUwx5l12tNamlLvL98KjiAaA3K8N7G/Krf0Bxoe9ou9IsNeBg4AX7JXiyoXU9Tz6DDYP9Gj8Q5wf2WEovcsYqGYpoiNJs5KHC0q0jf0TqEQO/J6UxNxK5NWqnNF2V8vu3ltIXnJG0nQm3z4CZS3/QQrvnCcdgjrk+en3nMU3J/4Tl5w7dxydmsR8pKGUGuyCR4fzS45hd36vIMfnn/ij77qvl/6Q1OSf8oqeqY05/p8BeQvLvF0jL6dhhz+algP1etbWDE8gkoMGAt/v3FUlY/El+2TNzIpgUnHroQtDFbWowtIl+Krc7eHbnQZWPsTTN44K2+T0sPcrgep3ViTOYUFGIvEblAAJM5MbORs2Dh4uWvgVaZu9t9UJb/qqOA0sjrdmR0CP9fsmJFAQ4TNYPj4kB79eHhhPQ2Kx7tekZa1VrSh+Ykq1kempmyzKPfkhusV6ckHuCwcL3DfSe/Wq7oHsg/j3VcIcafWLActOefmN3YJYiUU8h3Apco1qhaFfZZ2uOx/GMnfjlai2zmXKFcKEEegKWB+yZ5ERNHX40sOt/Zta86zijTpIHQYenF/ysFyo3M0KhmMoNZyGKZDajCYzjn2Q4ULT1CUU3A6tIpcn9VWBAxZ6l1zX8IWUWl6QqkG0TsGn0PtY/g1xXtCgiZGGVYuo/vUvwcT3GOAgFhLJnRfOKrqaDBoEB8fJ8eq/JgNY8kijMto1UsVjol8ZOqxJlW1fPJYT3iehmLY7NnC"
   },
-  "updated": "2026-11-12T00:25:57.395Z"
+  "updated": "2026-11-12T00:37:59.154Z"
 }
