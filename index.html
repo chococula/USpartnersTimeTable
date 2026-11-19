@@ -6,7 +6,7 @@
 <title>LG R&amp;D US Partner Meetings</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a booking ledger. Each day is split into two track columns (SW QA | App Dev); hours run down. Phone stacks days. */
+/* Layout: a booking ledger. Each day is split into two track columns (SW QA | App Dev); time slots run down. Phone stacks days. */
 :root{
   color-scheme:light;
   --ink:#16202e; --muted:#5d6878; --ground:#f3f5f8; --sheet:#ffffff; --rule:#dce1e8; --rule-strong:#b9c2cf;
@@ -90,9 +90,11 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
 .trackhead{padding:8px 10px;display:flex;flex-direction:column}
 .trackhead .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .tcol{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding:12px 8px 0 12px;font-variant-numeric:tabular-nums}
-.cell{padding:5px;display:flex}
+.cell{padding:4px 5px;display:flex}
+.board > .half{border-top-style:dashed}
+.tcol.half{opacity:.6}
 
-.slot{all:unset;box-sizing:border-box;width:100%;min-height:44px;border-radius:6px;padding:6px 7px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-family:var(--f-display);transition:box-shadow .12s ease;overflow-wrap:anywhere}
+.slot{all:unset;box-sizing:border-box;width:100%;min-height:40px;border-radius:6px;padding:5px 7px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-family:var(--f-display);transition:box-shadow .12s ease;overflow-wrap:anywhere}
 .slot .t{font-family:var(--f-mono);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .slot .s{font-size:12px;font-weight:600;letter-spacing:.02em}
 .slot .co{font-size:12.5px;font-weight:700;color:var(--ink);margin-top:3px;line-height:1.25}
@@ -147,6 +149,15 @@ dialog .when{font-family:var(--f-mono);font-size:13px;color:var(--muted);margin:
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 textarea{resize:vertical;min-height:60px}
 .dlg-btns{display:flex;justify-content:flex-end;gap:8px}
+.field .lbl{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
+.attlist{display:flex;flex-direction:column;gap:6px}
+.attlist:empty{display:none}
+.attrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) auto;gap:6px;align-items:center}
+.attdel{all:unset;cursor:pointer;width:30px;height:30px;text-align:center;line-height:30px;border-radius:6px;color:var(--muted);font-size:18px}
+.attdel:hover{color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent)}
+.attdel:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.small{font-size:13px;padding:6px 12px;align-self:flex-start;margin-top:2px}
+dialog{max-height:calc(100dvh - 32px)}
 @media (max-width:480px){.grid2{grid-template-columns:1fr}}
 
 .cards{display:none;flex-direction:column;gap:14px}
@@ -170,7 +181,7 @@ textarea{resize:vertical;min-height:60px}
   <span class="ab-btns">
     <button class="abtn" id="discardBtn" type="button" disabled>Discard</button>
     <button class="abtn primary" id="saveBtn" type="button" disabled>Save</button>
-    <button class="abtn" id="pptBtn" type="button" title="Download the booked schedule as a PowerPoint slide">Export PPT</button>
+    <button class="abtn" id="pptBtn" type="button" title="Download the booked schedule and partner contacts as PowerPoint slides">Export PPT</button>
     <button class="abtn" id="logoutBtn" type="button" title="Exit and forget the token on this browser">Lock</button>
     <button class="abtn" id="exitBtn" type="button" title="Back to the partner view">Exit</button>
   </span>
@@ -219,11 +230,20 @@ textarea{resize:vertical;min-height:60px}
         <option value="busy">Unavailable</option>
       </select>
     </div>
+    <div class="grid2">
+      <div class="field"><label for="fStart">Starts</label><select id="fStart"></select></div>
+      <div class="field"><label for="fEnd">Ends</label><select id="fEnd"></select></div>
+    </div>
     <div class="field"><label for="fCo">Company</label><input id="fCo" type="text" autocomplete="off" list="coList" placeholder="Type or pick a saved partner"><datalist id="coList"></datalist></div>
-    <div class="field"><label for="fName">Contact person</label><input id="fName" type="text" autocomplete="off"></div>
+    <div class="field"><label for="fName">Point of contact</label><input id="fName" type="text" autocomplete="off"></div>
     <div class="grid2">
       <div class="field"><label for="fEmail">Email</label><input id="fEmail" type="email" autocomplete="off"></div>
       <div class="field"><label for="fPhone">Phone</label><input id="fPhone" type="tel" autocomplete="off"></div>
+    </div>
+    <div class="field" role="group" aria-labelledby="attLbl">
+      <span class="lbl" id="attLbl">Additional attendees</span>
+      <div class="attlist" id="attList"></div>
+      <button class="btn ghost small" type="button" id="attAdd">+ Add attendee</button>
     </div>
     <div class="field"><label for="fAddr">Location / address</label><input id="fAddr" type="text" autocomplete="off" placeholder="Street, city, or meeting room / video link"></div>
     <div class="field"><label for="fNote">Note</label><textarea id="fNote"></textarea></div>
@@ -251,7 +271,7 @@ textarea{resize:vertical;min-height:60px}
 
 <!--
   Layout config. Bookings live in slots.json (edited from the #admin view).
-  slots.json: "slots" maps "<track>|YYYY-MM-DDTHH" to "booked" | "hold" | "busy" (open slots are absent).
+  slots.json: "slots" maps "<track>|YYYY-MM-DDTHH:MM" (one key per "step"-minute slot) to "booked" | "hold" | "busy" (open slots are absent).
   "details" holds partner company/contact info, AES-GCM encrypted with the admin passphrase.
 -->
 <script id="config" type="application/json">
@@ -266,7 +286,8 @@ textarea{resize:vertical;min-height:60px}
   ],
   "days": ["2026-11-30", "2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04"],
   "startHour": 9,
-  "endHour": 17
+  "endHour": 17,
+  "step": 30
 }
 </script>
 <script>
@@ -282,9 +303,23 @@ textarea{resize:vertical;min-height:60px}
   var $ = function(id){return document.getElementById(id)};
   function pad(n){return (n<10?'0':'')+n}
   function parts(iso){var p=iso.split('-').map(Number);var d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return {dow:DOW[d.getUTCDay()],mon:MON[p[1]-1],day:p[2]}}
-  function key(t,d,h){return t+'|'+d+'T'+pad(h)}
+  // Slots are STEP minutes long. A time is minutes since midnight (540 = 09:00); keys look like "qa|2026-12-01T09:30".
+  var STEP=C.step||60;
+  function fmt(m){return pad(Math.floor(m/60))+':'+pad(m%60)}
+  function key(t,d,m){return t+'|'+d+'T'+fmt(m)}
+  function keyMin(k){var r=k.split('T').pop().split(':');return Number(r[0])*60+Number(r[1]||0)}
+  // Older saves used one key per hour ("…T09"); split each into the STEP-minute slots it covers.
+  function migrate(o){
+    if(!o) return o; var r={};
+    Object.keys(o).forEach(function(k){
+      var mm=k.match(/^(.*T)(\d\d)$/);
+      if(!mm){ r[k]=o[k]; return; }
+      for(var m=Number(mm[2])*60;m<Number(mm[2])*60+60;m+=STEP){ var nk=mm[1]+fmt(m); if(!(nk in o)) r[nk]=o[k]; }
+    });
+    return r;
+  }
   function state(k){return slots[k]||'open'}
-  var hours=[];for(var h=C.startHour;h<C.endHour;h++)hours.push(h);
+  var hours=[];for(var h=C.startHour*60;h<C.endHour*60;h+=STEP)hours.push(h);  // slot start times in minutes
   function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
   function openCount(t,d){return hours.filter(function(h){return state(key(t,d,h))==='open'}).length}
   // Fields a Booked slot should have; empty ones are flagged red in the editor and the table.
@@ -296,8 +331,8 @@ textarea{resize:vertical;min-height:60px}
   function snap(){return JSON.stringify({s:sorted(slots),d:sorted(details)})}
   function savedOf(k){try{var o=JSON.parse(savedSnap);return JSON.stringify([o.s[k]||'open',o.d[k]||null])}catch(e){return ''}}
   function store(k,v){try{ if(v===undefined) return localStorage.getItem(k); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v);}catch(e){return null}}
-  function whenText(k){var t=k.split('|')[0], r=k.split('|')[1], d=r.slice(0,10), hh=Number(r.slice(11)), p=parts(d);
-    return {track:TRACK[t], text:p.dow+' '+p.mon+' '+p.day+', '+pad(hh)+':00–'+pad(hh+1)+':00 '+C.tz};}
+  function whenText(k){var t=k.split('|')[0], r=k.split('|')[1], d=r.slice(0,10), m=keyMin(k), p=parts(d);
+    return {track:TRACK[t], day:p.dow+' '+p.mon+' '+p.day, text:p.dow+' '+p.mon+' '+p.day+', '+fmt(m)+'–'+fmt(m+STEP)+' '+C.tz};}
 
   // ---- crypto (AES-GCM, key from passphrase via PBKDF2) ----
   function toB64(u8){var s='';for(var i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s)}
@@ -327,17 +362,21 @@ textarea{resize:vertical;min-height:60px}
     var miss=(admin && st==='booked')? missingOf(details[k]||{}) : [];
     var b=el('button','slot '+st+(picked===k?' picked':'')+(changed?' changed':'')+(miss.length&&!changed?' incomplete':''));
     b.type='button'; b.id='slot-'+k.replace('|','-')+suffix;
-    b.appendChild(el('span','t',pad(h)+':00–'+pad(h+1)+':00'));
+    b.appendChild(el('span','t',fmt(h)+'–'+fmt(h+STEP)));
     b.appendChild(el('span','s',picked===k?'Selected':LABEL[st]));
-    if(info){
+    // A slot that continues the meeting above it (same status and details) only repeats the company name.
+    var pk=key(t,d,h-STEP), cont=info && st!=='open' && state(pk)===st && JSON.stringify(details[pk]||null)===JSON.stringify(info);
+    if(cont){ if(info.company) b.appendChild(el('span','co','↳ '+info.company)); }
+    else if(info){
       if(info.company) b.appendChild(el('span','co',info.company));
       var who=[info.name,info.email,info.phone,info.address?'📍 '+info.address:''].filter(Boolean);
       who.forEach(function(x){b.appendChild(el('span','pp',x))});
+      if(info.attendees&&info.attendees.length) b.appendChild(el('span','pp','+ '+info.attendees.map(function(a){return a.name||a.email}).join(', ')));
       if(info.note) b.appendChild(el('span','pp',info.note));
     }
     if(miss.length) b.appendChild(el('span','miss','Missing: '+miss.map(function(f){return REQ_LABEL[f]}).join(', ')));
     var p=parts(d);
-    b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+pad(h)+':00 to '+pad(h+1)+':00, '+LABEL[st]+(info&&info.company?', '+info.company:''));
+    b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+fmt(h)+' to '+fmt(h+STEP)+', '+LABEL[st]+(info&&info.company?', '+info.company:''));
     if(!admin && st!=='open'){b.disabled=true;return b;}
     b.addEventListener('click',function(){
       if(admin){ openEditor(k); return; }
@@ -364,10 +403,11 @@ textarea{resize:vertical;min-height:60px}
     C.days.forEach(function(d){board.appendChild(dayHead(d,' r1 first'))});
     C.days.forEach(function(d){ C.tracks.forEach(function(t,i){board.appendChild(trackHead(t.id,d,i===0?' first':' second'))}); });
     hours.forEach(function(h){
-      board.appendChild(el('div','tcol',pad(h)+':00'));
+      var half=h%60?' half':'';
+      board.appendChild(el('div','tcol'+half,fmt(h)));
       C.days.forEach(function(d){
         C.tracks.forEach(function(t,i){
-          var c=el('div','cell'+(i===0?' first':' second'));c.appendChild(slotBtn(t.id,d,h,''));board.appendChild(c);
+          var c=el('div','cell'+half+(i===0?' first':' second'));c.appendChild(slotBtn(t.id,d,h,''));board.appendChild(c);
         });
       });
     });
@@ -423,8 +463,8 @@ textarea{resize:vertical;min-height:60px}
     var status=$('loadStatus');
     try{
       remote=await fetchRemote();
-      slots=remote.slots||{};
-      details=(admin&&pass)? await decryptDetails(remote.details,pass) : {};
+      slots=migrate(remote.slots||{});
+      details=(admin&&pass)? migrate(await decryptDetails(remote.details,pass)) : {};
       savedSnap=snap();
       if(admin && restoreDraft()) msg('Restored edits from this browser that were not saved yet. Press Save bookings to store them.',true);
       status.textContent=''; status.className='status';
@@ -479,12 +519,28 @@ textarea{resize:vertical;min-height:60px}
   });
   $('discardBtn').addEventListener('click',function(){ var o=JSON.parse(savedSnap); slots=o.s; details=o.d; render(); msg('Changes discarded.'); });
 
+  function sameAs(a,b){ return state(a)===state(b) && JSON.stringify(details[a]||null)===JSON.stringify(details[b]||null); }
+  function fillTimes(sel,list,val){
+    sel.textContent='';
+    list.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=fmt(m); sel.appendChild(o); });
+    sel.value=val;
+  }
+  // Clicking any slot of a meeting edits the whole meeting: the run of neighbouring slots with the same status and details.
   function openEditor(k){
-    editing=k; var w=whenText(k), info=details[k]||{};
-    $('dlgTitle').textContent=w.track; $('dlgWhen').textContent=w.text;
+    var t=k.split('|')[0], d=k.split('|')[1].slice(0,10), s=keyMin(k), e=s+STEP;
+    if(state(k)!=='open'){
+      while(s-STEP>=C.startHour*60 && sameAs(key(t,d,s-STEP),k)) s-=STEP;
+      while(e<C.endHour*60 && sameAs(key(t,d,e),k)) e+=STEP;
+    }
+    editing={t:t,d:d,s:s,e:e}; clashWarned=false;
+    var w=whenText(k), info=details[k]||{};
+    $('dlgTitle').textContent=w.track; $('dlgWhen').textContent=w.day+' · '+C.tz;
+    fillTimes($('fStart'),hours,s);
+    fillTimes($('fEnd'),hours.map(function(m){return m+STEP}),e);
     $('fStatus').value=state(k)==='open'?'booked':state(k);
     $('fCo').value=info.company||''; $('fName').value=info.name||'';
     $('fEmail').value=info.email||''; $('fPhone').value=info.phone||''; $('fAddr').value=info.address||''; $('fNote').value=info.note||'';
+    setAtts(info.attendees);
     applyWarned=false; markMissing(false);
     var list=$('coList'); list.textContent='';
     Object.keys(partners()).sort(function(a,b){return a.localeCompare(b)}).forEach(function(c){ var o=document.createElement('option'); o.value=c; list.appendChild(o); });
@@ -500,10 +556,29 @@ textarea{resize:vertical;min-height:60px}
     var p=partners()[$('fCo').value.trim()];
     if(!p) return;
     $('fName').value=p.name||''; $('fEmail').value=p.email||''; $('fPhone').value=p.phone||''; $('fAddr').value=p.address||'';
+    setAtts(p.attendees);
   });
+  // Additional attendees: any number of name + email rows under the point of contact.
+  function addAttRow(a){
+    var r=el('div','attrow');
+    var n=el('input','att-name'); n.type='text'; n.autocomplete='off'; n.placeholder='Name'; n.setAttribute('aria-label','Attendee name'); n.value=(a&&a.name)||'';
+    var m=el('input','att-email'); m.type='email'; m.autocomplete='off'; m.placeholder='Email'; m.setAttribute('aria-label','Attendee email'); m.value=(a&&a.email)||'';
+    var x=el('button','attdel','×'); x.type='button'; x.setAttribute('aria-label','Remove attendee');
+    x.addEventListener('click',function(){ r.remove(); $('attAdd').focus(); });
+    r.appendChild(n); r.appendChild(m); r.appendChild(x); $('attList').appendChild(r);
+    return n;
+  }
+  function setAtts(list){ $('attList').textContent=''; (list||[]).forEach(addAttRow); }
+  function readAtts(){
+    return [].map.call($('attList').querySelectorAll('.attrow'),function(r){
+      var o={}, n=r.querySelector('.att-name').value.trim(), m=r.querySelector('.att-email').value.trim();
+      if(n) o.name=n; if(m) o.email=m; return o;
+    }).filter(function(o){ return o.name||o.email; });
+  }
+  $('attAdd').addEventListener('click',function(){ addAttRow().focus(); });
   var applyWarned=false;
   function formInfo(){
-    return {company:$('fCo').value.trim(),name:$('fName').value.trim(),email:$('fEmail').value.trim(),phone:$('fPhone').value.trim(),address:$('fAddr').value.trim(),note:$('fNote').value.trim()};
+    return {company:$('fCo').value.trim(),name:$('fName').value.trim(),email:$('fEmail').value.trim(),phone:$('fPhone').value.trim(),address:$('fAddr').value.trim(),attendees:readAtts(),note:$('fNote').value.trim()};
   }
   // show = true: paint every empty required field red (only for Booked). Returns the missing list.
   function markMissing(show){
@@ -518,17 +593,30 @@ textarea{resize:vertical;min-height:60px}
     $(id).addEventListener(id==='fStatus'?'change':'input',function(){ if(applyWarned) markMissing(true); });
   });
   $('dlgCancel').addEventListener('click',function(){ $('dlg').close(); });
+  var clashWarned=false;
+  ['fStart','fEnd'].forEach(function(id){ $(id).addEventListener('change',function(){ clashWarned=false; }); });
+  function dlgError(t){ var m=$('dlgMsg'); m.hidden=false; m.textContent=t; }
   $('dlgForm').addEventListener('submit',function(e){
     e.preventDefault();
+    var E=editing, ns=Number($('fStart').value), ne=Number($('fEnd').value), st=$('fStatus').value, m;
+    if(ne<=ns){ dlgError('The end time must be after the start time.'); $('fEnd').focus(); return; }
+    // Warn once before the new time range overwrites a different booking on this track.
+    var clash=[];
+    for(m=ns;m<ne;m+=STEP){ if((m<E.s||m>=E.e) && state(key(E.t,E.d,m))!=='open') clash.push(fmt(m)); }
+    if(clash.length && !clashWarned){ clashWarned=true; dlgError('This range overlaps another entry at '+clash.join(', ')+'. Press Apply again to replace it.'); return; }
     var miss=markMissing(true);
     if(miss.length && !applyWarned){ applyWarned=true; $(REQ_INPUT[miss[0]]).focus(); return; }
-    var k=editing, st=$('fStatus').value;
     var info=formInfo();
-    Object.keys(info).forEach(function(x){ if(!info[x]) delete info[x]; });
-    if(st==='open'){ delete slots[k]; delete details[k]; }
-    else { slots[k]=st; if(Object.keys(info).length) details[k]=info; else delete details[k]; }
+    Object.keys(info).forEach(function(x){ if(!info[x] || (Array.isArray(info[x]) && !info[x].length)) delete info[x]; });
+    // Slots of the original meeting that fall outside the new range are freed.
+    for(m=E.s;m<E.e;m+=STEP){ if(m<ns||m>=ne){ var ok=key(E.t,E.d,m); delete slots[ok]; delete details[ok]; } }
+    for(m=ns;m<ne;m+=STEP){
+      var k=key(E.t,E.d,m);
+      if(st==='open'){ delete slots[k]; delete details[k]; }
+      else { slots[k]=st; if(Object.keys(info).length) details[k]=JSON.parse(JSON.stringify(info)); else delete details[k]; }
+    }
     $('dlg').close(); render();
-    var b=$('slot-'+k.replace('|','-')); if(b) b.focus();
+    var b=$('slot-'+key(E.t,E.d,ns).replace('|','-')); if(b) b.focus();
     save();  // every Apply is written to GitHub straight away
   });
 
@@ -555,7 +643,7 @@ textarea{resize:vertical;min-height:60px}
   }
   function restoreDraft(){
     var raw=store('avail-draft'); if(!raw) return false;
-    try{ var ch=JSON.parse(raw); if(!Object.keys(ch).length) return false; applyChanges(ch); return true; }catch(e){ return false; }
+    try{ var ch=migrate(JSON.parse(raw)); if(!Object.keys(ch).length) return false; applyChanges(ch); return true; }catch(e){ return false; }
   }
 
   var saveAgain=false;
@@ -590,15 +678,15 @@ textarea{resize:vertical;min-height:60px}
     if(window.PptxGenJS) return Promise.resolve();
     return new Promise(function(res,rej){ var s=document.createElement('script'); s.src=PPT_LIB; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
   }
-  // Consecutive hours with the same status and company become one block, e.g. 13:00 ~ 16:00.
+  // Consecutive slots with the same status and company become one block, e.g. 13:00 ~ 14:30.
   function meetingBlocks(t,d){
     var out=[], cur=null;
     hours.forEach(function(h){
       var k=key(t,d,h), st=state(k);
       if(st!=='booked' && st!=='hold'){ cur=null; return; }
       var info=details[k]||{}, id=st+'|'+(info.company||'');
-      if(cur && cur.id===id && cur.e===h){ cur.e=h+1; return; }
-      cur={id:id,s:h,e:h+1,state:st,info:info}; out.push(cur);
+      if(cur && cur.id===id && cur.e===h){ cur.e=h+STEP; return; }
+      cur={id:id,s:h,e:h+STEP,state:st,info:info}; out.push(cur);
     });
     return out;
   }
@@ -635,7 +723,7 @@ textarea{resize:vertical;min-height:60px}
       var runs=[];
       list.forEach(function(b,i){
         if(i) runs.push(line(' ',{fontSize:5}));
-        runs.push({text:pad(b.s)+':00 ~ '+pad(b.e)+':00   ',options:{}});
+        runs.push({text:fmt(b.s)+' ~ '+fmt(b.e)+'   ',options:{}});
         runs.push(line(b.track,{fontSize:8.5,color:'666666'}));
         runs.push(line((b.info.company||'Booked')+' 미팅'+(b.state==='hold'?' (가예약)':''),{bold:true}));
       });
@@ -643,9 +731,9 @@ textarea{resize:vertical;min-height:60px}
     }
     var ROWS=[
       {label:'조식', meal:meals.breakfast, pick:function(){return false}},
-      {label:'오전', pick:function(b){return b.s<12}},
-      {label:'중식', meal:meals.lunch, pick:function(b){return b.s===12}},
-      {label:'오후', pick:function(b){return b.s>=13}},
+      {label:'오전', pick:function(b){return b.s<720}},
+      {label:'중식', meal:meals.lunch, pick:function(b){return b.s>=720 && b.s<780}},
+      {label:'오후', pick:function(b){return b.s>=780}},
       {label:'석식', meal:meals.dinner, pick:function(){return false}}
     ];
     ROWS.forEach(function(R,ri){
@@ -667,6 +755,101 @@ textarea{resize:vertical;min-height:60px}
       fontFace:FONT,fontSize:10.5,color:INK,valign:'middle',margin:[0.05,0.15,0.05,0.15]});
     return s;
   }
+  // ---- Slide 2+: one row per partner company with its meetings, point(s) of contact and additional attendees ----
+  function dayLabel(d){
+    var KDOW=['일','월','화','수','목','금','토'], p=d.split('-').map(Number), dt=new Date(Date.UTC(p[0],p[1]-1,p[2]));
+    return p[1]+'/'+p[2]+'('+KDOW[dt.getUTCDay()]+')';
+  }
+  function companyContacts(){
+    var map={};
+    function co(name){ return map[name]||(map[name]={company:name,meetings:{},pocs:[],atts:[],addrs:[],seen:{},first:'~'}); }
+    function addPerson(c,list,p){
+      var id=((p.email||'')+'|'+(p.name||'')).toLowerCase();
+      if(id==='|'||c.seen[id]) return; c.seen[id]=1; list.push(p);
+    }
+    C.days.forEach(function(d){
+      C.tracks.forEach(function(t){
+        // meetings (consecutive hours merged); the same block on both tracks is listed once
+        meetingBlocks(t.id,d).forEach(function(b){
+          if(!b.info.company) return;
+          var c=co(b.info.company), mk=d+'|'+fmt(b.s)+'|'+fmt(b.e)+'|'+b.state;
+          var m=c.meetings[mk]||(c.meetings[mk]={d:d,s:b.s,e:b.e,state:b.state,tracks:[]});
+          if(m.tracks.indexOf(t.name)<0) m.tracks.push(t.name);
+          if(d+fmt(b.s)<c.first) c.first=d+fmt(b.s);
+        });
+        // contacts from every booked/held hour, so a different POC on another hour is not lost
+        hours.forEach(function(h){
+          var k=key(t.id,d,h), st=state(k), info=details[k];
+          if((st!=='booked'&&st!=='hold') || !info || !info.company) return;
+          var c=co(info.company);
+          if(info.name||info.email||info.phone) addPerson(c,c.pocs,{name:info.name,email:info.email,phone:info.phone});
+          (info.attendees||[]).forEach(function(a){ addPerson(c,c.atts,a); });
+          if(info.address && c.addrs.indexOf(info.address)<0) c.addrs.push(info.address);
+        });
+      });
+    });
+    return Object.keys(map).map(function(n){ return map[n]; })
+      .sort(function(a,b){ return a.first.localeCompare(b.first) || a.company.localeCompare(b.company); });
+  }
+  function buildContactSlides(pptx, now){
+    var FONT='Malgun Gothic', INK='111111', GRAY='555555', LINE='8C8C8C', HEAD='E9E9E9';
+    var thin={type:'solid',pt:0.75,color:LINE}, none={type:'none'};
+    var list=companyContacts();
+    function finish(runs){ if(!runs.length) return [{text:'—',options:{color:'999999'}}]; delete runs[runs.length-1].options.breakLine; return runs; }
+    function L(text,o){ return {text:text,options:Object.assign({breakLine:true},o||{})}; }
+    var rows=list.map(function(c){
+      var meet=[], poc=[], att=[], addr=[];
+      var ms=Object.keys(c.meetings).sort().map(function(k){ return c.meetings[k]; });
+      ms.forEach(function(m){
+        var tail=(m.state==='hold'?' (가예약)':'')+(m.tracks.length<C.tracks.length?' · '+m.tracks.join(', '):'');
+        meet.push(L(dayLabel(m.d)+' '+fmt(m.s)+' ~ '+fmt(m.e)+tail));
+      });
+      var pocLines=0;
+      c.pocs.forEach(function(p,i){
+        if(i){ poc.push(L(' ',{fontSize:4})); pocLines+=0.4; }
+        if(p.name){ poc.push(L(p.name,{bold:true})); pocLines++; }
+        if(p.email){ poc.push(L(p.email,{color:GRAY})); pocLines++; }
+        if(p.phone){ poc.push(L(p.phone,{color:GRAY})); pocLines++; }
+      });
+      c.atts.forEach(function(a){
+        if(a.name && a.email){ att.push({text:a.name+'  ',options:{bold:true}}); att.push(L(a.email,{color:GRAY})); }
+        else att.push(L(a.name||a.email,a.name?{bold:true}:{color:GRAY}));
+      });
+      c.addrs.forEach(function(a){ addr.push(L(a)); });
+      var lines=Math.max(1,ms.length,pocLines,c.atts.length,c.addrs.length*1.5);
+      return {lines:lines,cells:[[L(c.company,{bold:true})],meet,poc,att,addr]};
+    });
+    // Split onto as many slides as needed so long lists never run off the page.
+    var BUDGET=5.7, LH=0.175, PAD=0.14, pages=[[]], used=0;
+    rows.forEach(function(r){
+      var h=r.lines*LH+PAD;
+      if(used+h>BUDGET && pages[pages.length-1].length){ pages.push([]); used=0; }
+      pages[pages.length-1].push(r); used+=h;
+    });
+    var HEADS=['업체','미팅 일정','Point of Contact','추가 참석자','장소'];
+    var colW=[2.0,2.75,2.75,3.1,1.8];
+    pages.forEach(function(page,pi){
+      var s=pptx.addSlide();
+      var title='업체별 연락처'+(pages.length>1?' ('+(pi+1)+'/'+pages.length+')':'');
+      s.addText(title,{x:0.45,y:0.22,w:7.4,h:0.55,fontFace:FONT,fontSize:22,bold:true,color:INK,margin:0,valign:'middle'});
+      s.addText((now.getMonth()+1)+'/'+now.getDate()+'/'+String(now.getFullYear()).slice(2)+' 업데이트 기준',{x:7.9,y:0.3,w:3,h:0.4,fontFace:FONT,fontSize:10,bold:true,color:INK,margin:0,valign:'middle'});
+      s.addShape(pptx.ShapeType.line,{x:0,y:0.88,w:13.33,h:0,line:{color:INK,width:0.75}});
+      if(!page.length){
+        s.addText('No booked or held meetings with a company name yet.',{x:0.47,y:1.2,w:12,h:0.5,fontFace:FONT,fontSize:12,color:GRAY,margin:0});
+        return;
+      }
+      var head=HEADS.map(function(h,i){ return {text:h,options:{fill:{color:HEAD},bold:true,align:'center',border:[{type:'solid',pt:1.5,color:LINE},i===HEADS.length-1?none:thin,thin,i===0?none:thin]}}; });
+      var body=page.map(function(r,ri){
+        var last=ri===page.length-1;
+        return r.cells.map(function(runs,ci){
+          return {text:finish(runs),options:{valign:'top',border:[thin,ci===HEADS.length-1?none:thin,last?{type:'solid',pt:1.5,color:LINE}:thin,ci===0?none:thin]}};
+        });
+      });
+      s.addTable([head].concat(body),{x:0.47,y:1.08,w:12.4,colW:colW,
+        rowH:[0.4].concat(page.map(function(r){ return r.lines*LH+PAD; })),
+        fontFace:FONT,fontSize:9.5,color:INK,valign:'middle',margin:[0.05,0.1,0.05,0.1]});
+    });
+  }
   function openPptDialog(){
     if(snap()!==savedSnap){ msg('Save or discard your changes before exporting.',true); return; }
     var m={}; try{ m=JSON.parse(store('avail-ppt-meals')||'{}'); }catch(e){}
@@ -681,6 +864,7 @@ textarea{resize:vertical;min-height:60px}
     var now=new Date();
     var pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; // 13.33 x 7.5 in
     buildSlide(pptx, meals, now);
+    buildContactSlides(pptx, now);
     var stamp=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
     try{ await pptx.writeFile({fileName:'LG_RnD_US_Partner_Meetings_'+stamp+'.pptx'}); msg('PowerPoint downloaded.'); }
     catch(e){ msg('Could not create the PowerPoint file. Try again.',true); }
