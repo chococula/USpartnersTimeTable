@@ -90,9 +90,23 @@ h1{font-size:clamp(28px,4.4vw,40px);line-height:1.1;font-weight:700;letter-spaci
 .trackhead{padding:8px 10px;display:flex;flex-direction:column}
 .trackhead .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .tcol{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding:12px 8px 0 12px;font-variant-numeric:tabular-nums}
-.cell{padding:4px 5px;display:flex}
-.board > .half{border-top-style:dashed}
+.cell{padding:3px 5px;display:flex}
+.board > .half{border-top-color:color-mix(in srgb,var(--rule) 45%,transparent)}
+.tcol{padding-top:6px}
 .tcol.half{opacity:.6}
+.board .slot{min-height:0}
+.cards .slot{min-height:34px}
+/* partner view: quiet blocks, just the start time on open slots */
+body:not(.admin) .slot{padding:3px 8px}
+body:not(.admin) .slot.open{flex-direction:row;align-items:center;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--open) 30%,transparent)}
+body:not(.admin) .slot.open .t{font-size:11.5px}
+body:not(.admin) .slot.booked,body:not(.admin) .slot.hold,body:not(.admin) .slot.busy{justify-content:center;align-items:center;text-align:center}
+body:not(.admin) .slot.booked .s::before{content:none}
+body:not(.admin) .slot .s{font-size:11.5px;font-weight:600}
+.slot{user-select:none;-webkit-user-select:none}
+.slot.sel{box-shadow:inset 0 0 0 2.5px var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--sheet));color:var(--accent)}
+.slot.sel.bad{box-shadow:inset 0 0 0 2.5px var(--danger);background:color-mix(in srgb,var(--danger) 12%,var(--sheet));color:var(--danger)}
+body.dragging,body.dragging *{cursor:ns-resize!important}
 
 .slot{all:unset;box-sizing:border-box;width:100%;min-height:40px;border-radius:6px;padding:5px 7px;display:flex;flex-direction:column;justify-content:center;cursor:pointer;font-family:var(--f-display);transition:box-shadow .12s ease;overflow-wrap:anywhere}
 .slot .t{font-family:var(--f-mono);font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -177,7 +191,7 @@ dialog{max-height:calc(100dvh - 32px)}
 <body>
 <div class="adminbar" role="region" aria-label="Admin controls">
   <span class="ab-label">Admin mode</span>
-  <span class="ab-msg" id="adminMsg" role="status">Click a slot to edit. Apply saves to GitHub.</span>
+  <span class="ab-msg" id="adminMsg" role="status">Click a block to edit, or drag across slots to set a time range. Apply saves to GitHub.</span>
   <span class="ab-btns">
     <button class="abtn" id="discardBtn" type="button" disabled>Discard</button>
     <button class="abtn primary" id="saveBtn" type="button" disabled>Save</button>
@@ -356,34 +370,91 @@ dialog{max-height:calc(100dvh - 32px)}
   }
 
   // ---- render ----
-  function slotBtn(t,d,h,suffix){
-    var k=key(t,d,h), st=state(k), info=admin?details[k]:null;
-    var changed=admin && savedOf(k)!==JSON.stringify([st,details[k]||null]);
-    var miss=(admin && st==='booked')? missingOf(details[k]||{}) : [];
-    var b=el('button','slot '+st+(picked===k?' picked':'')+(changed?' changed':'')+(miss.length&&!changed?' incomplete':''));
-    b.type='button'; b.id='slot-'+k.replace('|','-')+suffix;
-    b.appendChild(el('span','t',fmt(h)+'–'+fmt(h+STEP)));
-    b.appendChild(el('span','s',picked===k?'Selected':LABEL[st]));
-    // A slot that continues the meeting above it (same status and details) only repeats the company name.
-    var pk=key(t,d,h-STEP), cont=info && st!=='open' && state(pk)===st && JSON.stringify(details[pk]||null)===JSON.stringify(info);
-    if(cont){ if(info.company) b.appendChild(el('span','co','↳ '+info.company)); }
-    else if(info){
-      if(info.company) b.appendChild(el('span','co',info.company));
-      var who=[info.name,info.email,info.phone,info.address?'📍 '+info.address:''].filter(Boolean);
-      who.forEach(function(x){b.appendChild(el('span','pp',x))});
-      if(info.attendees&&info.attendees.length) b.appendChild(el('span','pp','+ '+info.attendees.map(function(a){return a.name||a.email}).join(', ')));
-      if(info.note) b.appendChild(el('span','pp',info.note));
-    }
-    if(miss.length) b.appendChild(el('span','miss','Missing: '+miss.map(function(f){return REQ_LABEL[f]}).join(', ')));
-    var p=parts(d);
-    b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+fmt(h)+' to '+fmt(h+STEP)+', '+LABEL[st]+(info&&info.company?', '+info.company:''));
-    if(!admin && st!=='open'){b.disabled=true;return b;}
-    b.addEventListener('click',function(){
-      if(admin){ openEditor(k); return; }
-      picked=(picked===k?null:k); render();
-      var again=$(b.id); if(again) again.focus();
+  // One column (track + day) as blocks: every open slot is its own block; neighbouring non-open slots
+  // merge into one block (partners: same status; admin: same status and same details, i.e. one meeting).
+  function segments(t,d){
+    var out=[], cur=null;
+    hours.forEach(function(m){
+      var k=key(t,d,m), st=state(k), sig=st==='open'?null:(admin?st+'|'+JSON.stringify(details[k]||null):st);
+      if(cur && sig && cur.sig===sig){ cur.e=m+STEP; cur.keys.push(k); return; }
+      cur={sig:sig,s:m,e:m+STEP,st:st,keys:[k]}; out.push(cur);
     });
+    return out;
+  }
+  function inPick(t,d,m){ return !!picked && picked.t===t && picked.d===d && m>=picked.s && m<picked.e; }
+  function hrs(min){ var h=min/60; return (h%1?h.toFixed(1):String(h))+'h'; }
+  function slotBtn(t,d,g,suffix){
+    var k=g.keys[0], st=g.st, info=admin?details[k]:null, sel=inPick(t,d,g.s);
+    var changed=admin && g.keys.some(function(x){ return savedOf(x)!==JSON.stringify([state(x),details[x]||null]); });
+    var miss=(admin && st==='booked')? missingOf(info||{}) : [];
+    var b=el('button','slot '+st+(sel?' picked':'')+(changed?' changed':'')+(miss.length&&!changed?' incomplete':''));
+    b.type='button'; b.id='slot-'+k.replace('|','-')+suffix;
+    b.dataset.t=t; b.dataset.d=d; b.dataset.s=g.s; b.dataset.e=g.e;
+    var range=fmt(g.s)+'–'+fmt(g.e);
+    if(!admin){
+      // partner view: open slots show just their start time; taken time is one quiet block
+      if(st==='open') b.appendChild(el('span','t',(sel?'✓ ':'')+fmt(g.s)));
+      else { b.appendChild(el('span','s',LABEL[st])); if(g.e-g.s>STEP) b.appendChild(el('span','t',range)); }
+    } else {
+      b.appendChild(el('span','t',range));
+      b.appendChild(el('span','s',LABEL[st]));
+      if(info){
+        if(info.company) b.appendChild(el('span','co',info.company));
+        var who=[info.name,info.email,info.phone,info.address?'📍 '+info.address:''].filter(Boolean);
+        who.forEach(function(x){b.appendChild(el('span','pp',x))});
+        if(info.attendees&&info.attendees.length) b.appendChild(el('span','pp','+ '+info.attendees.map(function(a){return a.name||a.email}).join(', ')));
+        if(info.note) b.appendChild(el('span','pp',info.note));
+      }
+      if(miss.length) b.appendChild(el('span','miss','Missing: '+miss.map(function(f){return REQ_LABEL[f]}).join(', ')));
+    }
+    var p=parts(d);
+    b.setAttribute('aria-label',TRACK[t]+', '+p.dow+' '+p.mon+' '+p.day+', '+fmt(g.s)+' to '+fmt(g.e)+', '+(sel?'selected':LABEL[st])+(info&&info.company?', '+info.company:''));
+    if(!admin && st!=='open'){b.disabled=true;return b;}
+    b.addEventListener('pointerdown',startDrag);
+    b.addEventListener('click',function(){ if(Date.now()-lastPointer<400) return; activate(t,d,g.s,g.e); });
     return b;
+  }
+
+  // ---- click / drag to choose a time range ----
+  // Press on a slot and drag up or down the same column; releasing opens the editor (admin) or picks the window (partners).
+  var drag=null, lastPointer=0;
+  function rangeOk(t,d,s,e){ if(admin) return true; for(var m=s;m<e;m+=STEP){ if(state(key(t,d,m))!=='open') return false; } return true; }
+  function startDrag(ev){
+    if(ev.button!==0 || ev.pointerType==='touch') return;   // touch keeps normal scrolling; a tap is a click
+    var b=ev.currentTarget;
+    drag={t:b.dataset.t,d:b.dataset.d,s0:+b.dataset.s,e0:+b.dataset.e,s:+b.dataset.s,e:+b.dataset.e,moved:false};
+    document.body.classList.add('dragging');
+  }
+  function paintSel(){
+    document.querySelectorAll('.slot.sel').forEach(function(b){ b.classList.remove('sel','bad'); });
+    if(!drag || !drag.moved) return;
+    var ok=rangeOk(drag.t,drag.d,drag.s,drag.e);
+    document.querySelectorAll('.slot').forEach(function(b){
+      if(b.dataset.t===drag.t && b.dataset.d===drag.d && +b.dataset.s<drag.e && +b.dataset.e>drag.s){ b.classList.add('sel'); if(!ok) b.classList.add('bad'); }
+    });
+  }
+  document.addEventListener('pointermove',function(ev){
+    if(!drag) return;
+    var x=document.elementFromPoint(ev.clientX,ev.clientY), b=x&&x.closest&&x.closest('.slot');
+    if(!b || b.dataset.t!==drag.t || b.dataset.d!==drag.d) return;
+    var s=Math.min(drag.s0,+b.dataset.s), e=Math.max(drag.e0,+b.dataset.e);
+    if(s===drag.s && e===drag.e) return;
+    drag.s=s; drag.e=e; drag.moved=true; paintSel();
+  });
+  document.addEventListener('pointerup',function(){
+    if(!drag) return;
+    var r=drag; drag=null; lastPointer=Date.now(); paintSel(); document.body.classList.remove('dragging');
+    activate(r.t,r.d,r.s,r.e);
+  });
+  document.addEventListener('pointercancel',function(){ drag=null; paintSel(); document.body.classList.remove('dragging'); });
+  function activate(t,d,s,e){
+    if(admin){ openEditor(t,d,s,e); return; }
+    if(!rangeOk(t,d,s,e)){ $('pickText').textContent='That range includes time that is already taken. Pick only open slots.'; return; }
+    var same=picked && picked.t===t && picked.d===d && picked.s===s && picked.e===e;
+    picked=same?null:{t:t,d:d,s:s,e:e};
+    render();
+    var id='slot-'+key(t,d,s).replace('|','-'), again=window.matchMedia('(max-width:1100px)').matches?$(id+'-m'):$(id);
+    if(again) again.focus();
   }
   function dayHead(d,extra){
     var p=parts(d), e=el('div','dayhead'+(extra||''));
@@ -393,21 +464,28 @@ dialog{max-height:calc(100dvh - 32px)}
   function trackHead(t,d,extra){
     var e=el('div','trackhead'+(extra||''));
     e.appendChild(el('span','tk '+t,TRACK[t]));
-    e.appendChild(el('span','cnt',openCount(t,d)+' of '+hours.length+' open'));
+    e.appendChild(el('span','cnt',hrs(openCount(t,d)*STEP)+' open'));
     return e;
   }
+  function place(e,row,col){ e.style.gridRow=row; e.style.gridColumn=col; return e; }
   function render(){
     document.body.classList.toggle('admin',admin);
     var board=$('board'); board.textContent='';
-    board.appendChild(el('div','corner r1'));
-    C.days.forEach(function(d){board.appendChild(dayHead(d,' r1 first'))});
-    C.days.forEach(function(d){ C.tracks.forEach(function(t,i){board.appendChild(trackHead(t.id,d,i===0?' first':' second'))}); });
-    hours.forEach(function(h){
+    board.style.gridTemplateRows='auto auto repeat('+hours.length+', minmax('+(admin?34:28)+'px, auto))';
+    board.appendChild(place(el('div','corner r1'),'1 / span 2','1'));
+    C.days.forEach(function(d,di){ board.appendChild(place(dayHead(d,' r1 first'),'1',(2+di*2)+' / span 2')); });
+    C.days.forEach(function(d,di){ C.tracks.forEach(function(t,i){ board.appendChild(place(trackHead(t.id,d,i===0?' first':' second'),'2',String(2+di*2+i))); }); });
+    hours.forEach(function(h,hi){
       var half=h%60?' half':'';
-      board.appendChild(el('div','tcol'+half,fmt(h)));
-      C.days.forEach(function(d){
-        C.tracks.forEach(function(t,i){
-          var c=el('div','cell'+half+(i===0?' first':' second'));c.appendChild(slotBtn(t.id,d,h,''));board.appendChild(c);
+      board.appendChild(place(el('div','tcol'+half,(half&&!admin)?'':fmt(h)),String(3+hi),'1'));
+    });
+    C.days.forEach(function(d,di){
+      C.tracks.forEach(function(t,i){
+        segments(t.id,d).forEach(function(g){
+          var row=3+(g.s-hours[0])/STEP, span=(g.e-g.s)/STEP;
+          var c=el('div','cell'+(g.s%60?' half':'')+(i===0?' first':' second'));
+          c.appendChild(slotBtn(t.id,d,g,''));
+          board.appendChild(place(c,row+(span>1?' / span '+span:''),String(2+di*2+i)));
         });
       });
     });
@@ -417,7 +495,11 @@ dialog{max-height:calc(100dvh - 32px)}
       var cols=el('div','cols');
       C.tracks.forEach(function(t){
         var col=el('div','col'); col.appendChild(trackHead(t.id,d));
-        hours.forEach(function(h){col.appendChild(slotBtn(t.id,d,h,'-m'))});
+        segments(t.id,d).forEach(function(g){
+          var b=slotBtn(t.id,d,g,'-m'), n=(g.e-g.s)/STEP;
+          if(n>1) b.style.minHeight=(n*34+(n-1)*6)+'px';
+          col.appendChild(b);
+        });
         cols.appendChild(col);
       });
       card.appendChild(cols); cards.appendChild(card);
@@ -427,15 +509,19 @@ dialog{max-height:calc(100dvh - 32px)}
       var n=0; C.days.forEach(function(d){n+=openCount(t.id,d)});
       var box=el('div','total');
       box.appendChild(el('span','tk '+t.id,t.name));
-      box.appendChild(el('b',null,String(n)));
-      box.appendChild(el('span',null,'of '+(C.days.length*hours.length)+' open'));
+      box.appendChild(el('b',null,hrs(n*STEP)));
+      box.appendChild(el('span',null,'open of '+hrs(C.days.length*hours.length*STEP)));
       totals.appendChild(box);
     });
     $('tz').textContent=C.tz;
-    if(picked && state(picked)!=='open') picked=null;
+    if(picked && !rangeOk(picked.t,picked.d,picked.s,picked.e)) picked=null;
     var pt=$('pickText');
-    if(picked){ var w=whenText(picked); pt.textContent='Your pick: '; pt.appendChild(el('span','pick',w.track+' · '+w.text)); }
-    else pt.textContent=admin?'Admin view. Partners see Booked slots without any company or contact details.':'No slot selected yet. Pick an open block above.';
+    if(picked){
+      var pp=parts(picked.d); pt.textContent='Your pick: ';
+      pt.appendChild(el('span','pick',TRACK[picked.t]+' · '+pp.dow+' '+pp.mon+' '+pp.day+', '+fmt(picked.s)+'–'+fmt(picked.e)+' '+C.tz));
+    }
+    else pt.textContent=admin?'Admin view. Click a block to edit it, or drag across slots to book a time range. Partners see Booked slots without any company or contact details.'
+                             :'No time selected yet. Click an open slot, or drag down a column to choose a longer window.';
     var u=remote&&remote.updated;
     $('updated').textContent=(u?'Last updated '+new Date(u).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Los_Angeles'})+' PT. ':'')+'Times shown in '+C.tz+'.';
     var dirty=snap()!==savedSnap;
@@ -477,7 +563,7 @@ dialog{max-height:calc(100dvh - 32px)}
   // ---- admin ----
   function msg(t,err){
     var m=$(admin?'adminMsg':'loginMsg');
-    m.textContent=t||(admin?'Click a slot to edit. Apply saves to GitHub.':'');
+    m.textContent=t||(admin?'Click a block to edit, or drag across slots to set a time range. Apply saves to GitHub.':'');
     m.className=(admin?'ab-msg':'msg')+(err?' err':'');
   }
   async function unlock(t,p){
@@ -493,7 +579,7 @@ dialog{max-height:calc(100dvh - 32px)}
       pass=p; admin=true; picked=null;
       store('avail-admin-token',t); store('avail-admin-pass',p);
       closePopover(); $('adminToggle').hidden=true;
-      msg(data.details?'Click a slot to edit. Apply saves to GitHub.':'Unlocked. This passphrase will encrypt partner details from now on. Keep it safe: without it the details cannot be recovered.');
+      msg(data.details?'Click a block to edit, or drag across slots to set a time range. Apply saves to GitHub.':'Unlocked. This passphrase will encrypt partner details from now on. Keep it safe: without it the details cannot be recovered.');
       await load();
     }catch(e){
       token=null; store('avail-admin-token',null); store('avail-admin-pass',null);
@@ -519,19 +605,16 @@ dialog{max-height:calc(100dvh - 32px)}
   });
   $('discardBtn').addEventListener('click',function(){ var o=JSON.parse(savedSnap); slots=o.s; details=o.d; render(); msg('Changes discarded.'); });
 
-  function sameAs(a,b){ return state(a)===state(b) && JSON.stringify(details[a]||null)===JSON.stringify(details[b]||null); }
   function fillTimes(sel,list,val){
     sel.textContent='';
     list.forEach(function(m){ var o=document.createElement('option'); o.value=m; o.textContent=fmt(m); sel.appendChild(o); });
     sel.value=val;
   }
-  // Clicking any slot of a meeting edits the whole meeting: the run of neighbouring slots with the same status and details.
-  function openEditor(k){
-    var t=k.split('|')[0], d=k.split('|')[1].slice(0,10), s=keyMin(k), e=s+STEP;
-    if(state(k)!=='open'){
-      while(s-STEP>=C.startHour*60 && sameAs(key(t,d,s-STEP),k)) s-=STEP;
-      while(e<C.endHour*60 && sameAs(key(t,d,e),k)) e+=STEP;
-    }
+  // Edits the range [s,e) of one column: a clicked block (a whole meeting) or a dragged selection.
+  // The form is pre-filled from the first booked/held/unavailable slot inside the range, if there is one.
+  function openEditor(t,d,s,e){
+    var k=key(t,d,s);
+    for(var m=s;m<e;m+=STEP){ if(state(key(t,d,m))!=='open'){ k=key(t,d,m); break; } }
     editing={t:t,d:d,s:s,e:e}; clashWarned=false;
     var w=whenText(k), info=details[k]||{};
     $('dlgTitle').textContent=w.track; $('dlgWhen').textContent=w.day+' · '+C.tz;
